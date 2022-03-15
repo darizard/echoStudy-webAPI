@@ -31,7 +31,7 @@ namespace echoStudy_webAPI
 
             services.AddControllers();
 
-            services.AddDbContext<TodoContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<EchoStudyDB>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             /*
             services.AddSwaggerGen(c =>

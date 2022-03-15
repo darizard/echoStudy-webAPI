@@ -1,3 +1,4 @@
+using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -13,27 +14,26 @@ namespace echoStudy_webAPI
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             var host = CreateHostBuilder(args).Build();
 
-            await CreateDbIfNotExists(host);
+            CreateDbIfNotExists(host);
 
             host.Run();
         }
 
-        private static async Task CreateDbIfNotExists(IHost host)
+        private static void CreateDbIfNotExists(IHost host)
         {
             using (var scope = host.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
                 try
                 {
-                    var context = services.GetRequiredService<TodoContext>();
+                    var context = services.GetRequiredService<EchoStudyDB>();
                     var environment = services.GetRequiredService<IWebHostEnvironment>();
 
-                    context.Database.EnsureCreated();
-
+                    DbInitializer.Initialize(context);
                 }
                 catch (Exception ex)
                 {

@@ -29,12 +29,11 @@ namespace echoStudy_webAPI.Models
         public string Device { get; set; }
 
         [Required]
-        public int UserID { get; set; }
-        [Required]
         public EchoUser User { get; set; }
 
         [Required]
         public int DeckID { get; set; }
+
         [Required]
         public Deck Deck { get; set; }
 
