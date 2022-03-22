@@ -33,7 +33,7 @@ namespace echoStudy_webAPI
                     var context = services.GetRequiredService<EchoStudyDB>();
                     var environment = services.GetRequiredService<IWebHostEnvironment>();
 
-                    DbInitializer.Initialize(context);
+                    DbInitializer.InitializeEchoStudyDb(context);
                 }
                 catch (Exception ex)
                 {
