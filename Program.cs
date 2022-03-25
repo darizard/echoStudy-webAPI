@@ -1,6 +1,7 @@
 using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Models;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,8 +33,9 @@ namespace echoStudy_webAPI
                 {
                     var context = services.GetRequiredService<EchoStudyDB>();
                     var environment = services.GetRequiredService<IWebHostEnvironment>();
+                    var context2 = services.GetRequiredService<EchoStudyUsersRolesDB>();
 
-                    DbInitializer.InitializeEchoStudyDb(context);
+                    DbInitializer.InitializeEchoStudyDb(context, context2);
                 }
                 catch (Exception ex)
                 {

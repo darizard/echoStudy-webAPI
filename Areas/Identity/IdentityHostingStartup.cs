@@ -17,7 +17,7 @@ namespace echoStudy_webAPI.Areas.Identity
             builder.ConfigureServices((context, services) => {
                 services.AddDbContext<EchoStudyUsersRolesDB>(options =>
                     options.UseSqlServer(
-                        context.Configuration.GetConnectionString("EchoStudyUsersRolesDBConnection")));
+                        context.Configuration.GetConnectionString("DefaultConnection")));
 
                 services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
                     .AddEntityFrameworkStores<EchoStudyUsersRolesDB>();

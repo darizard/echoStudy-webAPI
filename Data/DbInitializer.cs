@@ -1,4 +1,5 @@
 ﻿using echoStudy_webAPI.Models;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,10 +10,12 @@ namespace echoStudy_webAPI.Data
         /**
          * Initializes EchoStudyDB and seeds data
          */
-        public static void InitializeEchoStudyDb(EchoStudyDB context)
+        public static void InitializeEchoStudyDb(EchoStudyDB context, EchoStudyUsersRolesDB context2)
         {
             // Create the DB if needed
             context.Database.EnsureCreated();
+            // Migrate
+            context2.Database.Migrate();
 
             // Seed data if none exists
             if (!context.Decks.Any() && !context.DeckCategories.Any() && !context.Cards.Any())
