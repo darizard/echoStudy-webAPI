@@ -1,6 +1,8 @@
+using echoStudy_webAPI.Areas.Identity.Data;
 using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Models;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,27 +17,30 @@ namespace echoStudy_webAPI
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var host = CreateHostBuilder(args).Build();
 
-            CreateDbIfNotExists(host);
+            await CreateDbIfNotExists(host);
 
             host.Run();
         }
 
-        private static void CreateDbIfNotExists(IHost host)
+        private static async Task CreateDbIfNotExists(IHost host)
         {
             using (var scope = host.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
                 try
                 {
-                    var context = services.GetRequiredService<EchoStudyDB>();
+                    var echoContext = services.GetRequiredService<EchoStudyDB>();
                     var environment = services.GetRequiredService<IWebHostEnvironment>();
-                    var context2 = services.GetRequiredService<EchoStudyUsersRolesDB>();
+                    var identityContext = services.GetRequiredService<EchoStudyUsersRolesDB>();
+                    var userManager = services.GetService<UserManager<EchoUser>>();
 
-                    DbInitializer.InitializeEchoStudyDb(context, context2);
+                    DbInitializer.CreateEchoStudyDB(echoContext, identityContext);
+                    await IdentityInitializer.Initialize(host);
+                    await DbInitializer.InitializeEchoStudyDb(echoContext, userManager);
                 }
                 catch (Exception ex)
                 {

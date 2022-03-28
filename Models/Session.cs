@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using echoStudy_webAPI.Areas.Identity.Data;
 using echoStudy_webAPI.Data;
+using System;
 
 namespace echoStudy_webAPI.Models
 {
@@ -39,5 +40,11 @@ namespace echoStudy_webAPI.Models
 
         [Required]
         public ICollection<Card> CardsPlayed { get; set; }
+
+        // These values should be manually handled in the controller
+        [ScaffoldColumn(false)]
+        public DateTime DateCreated { get; set; }
+        [ScaffoldColumn(false)]
+        public DateTime DateLastStudied{ get; set; }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using echoStudy_webAPI.Areas.Identity.Data;
 using echoStudy_webAPI.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -19,8 +20,9 @@ namespace echoStudy_webAPI.Areas.Identity
                     options.UseSqlServer(
                         context.Configuration.GetConnectionString("DefaultConnection")));
 
-                services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                    .AddEntityFrameworkStores<EchoStudyUsersRolesDB>();
+                services.AddDefaultIdentity<EchoUser>(options => options.SignIn.RequireConfirmedAccount = true)
+                .AddRoles<IdentityRole>()
+                .AddEntityFrameworkStores<EchoStudyUsersRolesDB>();
             });
         }
     }

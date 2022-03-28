@@ -2,6 +2,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using echoStudy_webAPI.Data;
+using System;
+using echoStudy_webAPI.Areas.Identity.Data;
 
 namespace echoStudy_webAPI.Models
 {
@@ -31,8 +33,19 @@ namespace echoStudy_webAPI.Models
         [StringLength(50)]
         public Language DefaultBackLang { get; set; }
 
+        [Required]
+        public EchoUser User { get; set; }
+
         public ICollection<DeckCategory> DeckCategories { get; set; }
         public ICollection<Card> Cards { get; set; }
+
+        // These values should be manually handled in the controller
+        [ScaffoldColumn(false)]
+        public DateTime DateCreated { get; set; }
+        [ScaffoldColumn(false)]
+        public DateTime DateUpdated { get; set; }
+        [ScaffoldColumn(false)]
+        public DateTime DateTouched { get; set; }
     }
 
 

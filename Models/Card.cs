@@ -2,6 +2,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using echoStudy_webAPI.Data;
+using System;
+using echoStudy_webAPI.Areas.Identity.Data;
 
 namespace echoStudy_webAPI.Models
 {
@@ -21,7 +23,11 @@ namespace echoStudy_webAPI.Models
 
         [Required]
         [StringLength(4000)]
-        public string AudioFile { get; set; }
+        public string FrontAudio { get; set; }
+
+        [Required]
+        [StringLength(4000)]
+        public string BackAudio { get; set; }
 
         [Required]
         [StringLength(50)]
@@ -31,6 +37,21 @@ namespace echoStudy_webAPI.Models
         [StringLength(50)]
         public Language BackLang { get; set; }
 
+        [Required]
+        public EchoUser User { get; set; }
+
         public ICollection<Deck> Decks { get; set; }
+
+        // These values should be manually handled in the controller
+        [ScaffoldColumn(false)]
+        public DateTime DateCreated { get; set; }
+        [ScaffoldColumn(false)]
+        public DateTime DateUpdated { get; set; }
+        [ScaffoldColumn(false)]
+        public DateTime DateTouched { get; set; }
+        // This specifically value should be set to 0 upon the creation of a new card and updated as it is studied
+        [ScaffoldColumn(false)]
+        [Range(0, 100, ErrorMessage = "Scores must be between values 0 and 100")]
+        public int Score { get; set; }
     }
 }
