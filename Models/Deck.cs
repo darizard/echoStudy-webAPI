@@ -36,8 +36,8 @@ namespace echoStudy_webAPI.Models
         [Required]
         public EchoUser User { get; set; }
 
-        public ICollection<DeckCategory> DeckCategories { get; set; }
-        public ICollection<Card> Cards { get; set; }
+        public virtual ICollection<DeckCategory> DeckCategories { get; set; }
+        public virtual ICollection<Card> Cards { get; set; }
 
         // These values should be manually handled in the controller
         [ScaffoldColumn(false)]

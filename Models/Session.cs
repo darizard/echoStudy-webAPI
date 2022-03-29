@@ -39,7 +39,7 @@ namespace echoStudy_webAPI.Models
         public Deck Deck { get; set; }
 
         [Required]
-        public ICollection<Card> CardsPlayed { get; set; }
+        public virtual ICollection<Card> CardsPlayed { get; set; }
 
         // These values should be manually handled in the controller
         [ScaffoldColumn(false)]

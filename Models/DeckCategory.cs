@@ -20,7 +20,7 @@ namespace echoStudy_webAPI.Models
         [StringLength(4000)]
         public string Description { get; set; }
 
-        public ICollection<Deck> Decks { get; set; }
+        public virtual ICollection<Deck> Decks { get; set; }
 
         [Required]
         public EchoUser User { get; set; }
