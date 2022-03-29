@@ -22,6 +22,7 @@ namespace echoStudy_webAPI.Areas.Identity
 
                 services.AddDefaultIdentity<EchoUser>(options => { })
                 .AddRoles<IdentityRole>()
+                .AddDefaultTokenProviders()
                 .AddSignInManager<SignInManager<EchoUser>>()
                 .AddEntityFrameworkStores<EchoStudyUsersRolesDB>();
 
