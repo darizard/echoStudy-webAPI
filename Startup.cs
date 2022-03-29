@@ -64,7 +64,6 @@ namespace echoStudy_webAPI
             app.UseRouting();
 
             app.UseAuthentication();
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {

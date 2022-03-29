@@ -20,9 +20,12 @@ namespace echoStudy_webAPI.Areas.Identity
                     options.UseSqlServer(
                         context.Configuration.GetConnectionString("DefaultConnection")));
 
-                services.AddDefaultIdentity<EchoUser>(options => options.SignIn.RequireConfirmedAccount = true)
+                services.AddDefaultIdentity<EchoUser>(options => { })
                 .AddRoles<IdentityRole>()
+                .AddSignInManager<SignInManager<EchoUser>>()
                 .AddEntityFrameworkStores<EchoStudyUsersRolesDB>();
+
+                services.AddMvc();
             });
         }
     }
