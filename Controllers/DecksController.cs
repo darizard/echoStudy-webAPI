@@ -20,8 +20,6 @@ namespace echoStudy_webAPI.Controllers
             _context = context;
         }
 
-       // class DeckInfo { }
-
         public class DeckInfo
         {
             public int id { get; set; }
