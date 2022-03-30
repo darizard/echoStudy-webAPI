@@ -53,6 +53,27 @@ namespace echoStudy_webAPI.Controllers
             return await query.ToListAsync();
         }
 
+        // GET: api/PublicDecks
+        [HttpGet]
+        [Route("Public")]
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDecks()
+        {
+            var query = from deck in _context.Decks
+                        where deck.Access == Data.Access.Public
+                        select new DeckInfo
+                        {
+                            id = deck.DeckID,
+                            title = deck.Title,
+                            description = deck.Description,
+                            access = deck.Access.ToString(),
+                            default_flang = deck.DefaultFrontLang.ToString(),
+                            default_blang = deck.DefaultBackLang.ToString(),
+                            cards = deck.Cards.Select(c => c.CardID).ToList(),
+                            creation_date = deck.DateCreated
+                        };
+            return await query.ToListAsync();
+        }
+
         // GET: api/Decks/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Deck>> GetDeck(int id)
