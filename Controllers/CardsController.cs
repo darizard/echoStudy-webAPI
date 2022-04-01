@@ -42,6 +42,8 @@ namespace echoStudy_webAPI.Controllers
             public int score { get; set; }
             public string ownerId { get; set; }
             public DateTime date_created { get; set; }
+            public DateTime date_updated { get; set; }
+            public DateTime date_touched { get; set; }
         }
         
         /**
@@ -77,7 +79,9 @@ namespace echoStudy_webAPI.Controllers
                             decks = c.Decks.Select(d => d.DeckID).ToList(),
                             score = c.Score,
                             ownerId = c.UserId,
-                            date_created = c.DateCreated
+                            date_created = c.DateCreated,
+                            date_updated = c.DateUpdated,
+                            date_touched = c.DateTouched
                         };
             return await query.ToListAsync();
         }
@@ -110,7 +114,9 @@ namespace echoStudy_webAPI.Controllers
                                 decks = c.Decks.Select(d => d.DeckID).ToList(),
                                 score = c.Score,
                                 ownerId = c.UserId,
-                                date_created = c.DateCreated
+                                date_created = c.DateCreated,
+                                date_updated = c.DateUpdated,
+                                date_touched = c.DateTouched
                             };
                 return await query.ToListAsync();
             }
@@ -138,7 +144,9 @@ namespace echoStudy_webAPI.Controllers
                                 decks = c.Decks.Select(d => d.DeckID).ToList(),
                                 score = c.Score,
                                 ownerId = c.UserId,
-                                date_created = c.DateCreated
+                                date_created = c.DateCreated,
+                                date_updated = c.DateUpdated,
+                                date_touched = c.DateTouched
                             };
                 return await query.ToListAsync();
         }
@@ -175,7 +183,9 @@ namespace echoStudy_webAPI.Controllers
                                 decks = c.Decks.Select(d => d.DeckID).ToList(),
                                 score = c.Score,
                                 ownerId = c.UserId,
-                                date_created = c.DateCreated
+                                date_created = c.DateCreated,
+                                date_updated = c.DateUpdated,
+                                date_touched = c.DateTouched
                             };
                 return await query.ToListAsync();
             }
@@ -202,7 +212,9 @@ namespace echoStudy_webAPI.Controllers
                             decks = c.Decks.Select(d => d.DeckID).ToList(),
                             score = c.Score,
                             ownerId = c.UserId,
-                            date_created = c.DateCreated
+                            date_created = c.DateCreated,
+                            date_updated = c.DateUpdated,
+                            date_touched = c.DateTouched
                         };
 
             var card = query.FirstOrDefault();
@@ -213,6 +225,38 @@ namespace echoStudy_webAPI.Controllers
             }
 
             return card;
+        }
+
+        /*
+ * Updates the given card by id 
+ */
+        // PATCH: api/Cards/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPatch("Touch={id}&{score}")]
+        public async Task<IActionResult> PatchCard(int id, int score)
+        {
+            var cardQuery = from c in _context.Cards.Include(c => c.Decks)
+                            where c.CardID == id
+                            select c;
+            // Create the card
+            if (cardQuery.Count() == 0)
+            {
+                return BadRequest("Card " + id + " does not exist");
+            }
+            // Update the card
+            else
+            {
+                Card card = cardQuery.First();
+
+                // Update score and last touched
+                card.Score = score;
+                card.DateTouched = DateTime.Now;
+
+                // Mark the card as modified
+                _context.Entry(card).State = EntityState.Modified;
+
+                return Ok(new { message = "Card was successfully touched.", card });
+            }
         }
 
         /*
