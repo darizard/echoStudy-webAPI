@@ -29,8 +29,8 @@ namespace echoStudy_webAPI.Models
         [Required]
         public string Device { get; set; }
 
-        [Required]
-        public EchoUser User { get; set; }
+        [ForeignKey("EchoUser")]
+        public virtual EchoUser User { get; set; }
 
         [Required]
         public int DeckID { get; set; }

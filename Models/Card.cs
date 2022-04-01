@@ -37,8 +37,8 @@ namespace echoStudy_webAPI.Models
         [StringLength(50)]
         public Language BackLang { get; set; }
 
-        [Required]
-        public EchoUser User { get; set; }
+        [ForeignKey("EchoUser")]
+        public virtual string UserId { get; set; } 
 
         public virtual ICollection<Deck> Decks { get; set; }
 

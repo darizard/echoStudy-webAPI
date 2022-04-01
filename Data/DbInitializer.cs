@@ -32,6 +32,8 @@ namespace echoStudy_webAPI.Data
             echoContext.Database.EnsureCreated();
             // Migrate Identity
             identityContext.Database.Migrate();
+
+
         }
 
         /**
@@ -378,7 +380,7 @@ namespace echoStudy_webAPI.Data
                 card.FrontLang = frontLang;
                 card.BackLang = backLang;
                 card.Score = 0;
-                card.User = owner;
+                card.UserId = owner.Id;
                 DateTime date = DateTime.Now.Add(randomTimeSpan());
                 card.DateCreated = date;
                 card.DateTouched = date.Add(randomTimeSpan());
