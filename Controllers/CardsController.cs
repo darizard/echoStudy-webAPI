@@ -228,17 +228,17 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /*
- * Updates the given card by id 
+ * "touches" given card by id
  */
         // PATCH: api/Cards/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("Touch={id}&{score}")]
-        public async Task<IActionResult> PatchCard(int id, int score)
+        public async Task<IActionResult> TouchCard(int id, int score)
         {
             var cardQuery = from c in _context.Cards.Include(c => c.Decks)
                             where c.CardID == id
                             select c;
-            // Create the card
+            // Card doesn't exist
             if (cardQuery.Count() == 0)
             {
                 return BadRequest("Card " + id + " does not exist");

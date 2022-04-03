@@ -30,7 +30,7 @@ namespace echoStudy_webAPI.Models
         public string Device { get; set; }
 
         [ForeignKey("EchoUser")]
-        public virtual EchoUser User { get; set; }
+        public virtual string UserId { get; set; }
 
         [Required]
         public int DeckID { get; set; }

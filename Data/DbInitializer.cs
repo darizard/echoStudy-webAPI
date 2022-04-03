@@ -61,7 +61,7 @@ namespace echoStudy_webAPI.Data
             langCategory.Decks = new List<Deck>();
             langCategory.Title = "Japanese";
             langCategory.Description = "Decks that are useful for learning Japanese";
-            langCategory.User = owner;
+            langCategory.UserId = owner.Id;
             langCategory.DateCreated = DateTime.Now;
             langCategory.DateTouched = DateTime.Now;
             langCategory.DateUpdated = DateTime.Now;
@@ -75,7 +75,7 @@ namespace echoStudy_webAPI.Data
             japaneseDeck1.Access = Access.Public;
             japaneseDeck1.DefaultFrontLang = Language.Japanese;
             japaneseDeck1.DefaultBackLang = Language.English;
-            japaneseDeck1.User = owner;
+            japaneseDeck1.UserId = owner.Id;
             DateTime date1 = DateTime.Now.Add(randomTimeSpan());
             japaneseDeck1.DateCreated = date1;
             japaneseDeck1.DateTouched = date1.Add(randomTimeSpan());
@@ -96,7 +96,7 @@ namespace echoStudy_webAPI.Data
             japaneseDeck2.Access = Access.Public;
             japaneseDeck2.DefaultFrontLang = Language.Japanese;
             japaneseDeck2.DefaultBackLang = Language.English;
-            japaneseDeck2.User = owner;
+            japaneseDeck2.UserId = owner.Id;
             DateTime date2 = DateTime.Now.Add(randomTimeSpan());
             japaneseDeck2.DateCreated = date2;
             japaneseDeck2.DateTouched = date2.Add(randomTimeSpan());
@@ -117,7 +117,7 @@ namespace echoStudy_webAPI.Data
             japaneseDeck3.Access = Access.Private;
             japaneseDeck3.DefaultFrontLang = Language.Japanese;
             japaneseDeck3.DefaultBackLang = Language.English;
-            japaneseDeck3.User = owner;
+            japaneseDeck3.UserId = owner.Id;
             DateTime date3 = DateTime.Now.Add(randomTimeSpan());
             japaneseDeck3.DateCreated = date3;
             japaneseDeck3.DateTouched = date3.Add(randomTimeSpan());
@@ -165,7 +165,7 @@ namespace echoStudy_webAPI.Data
             langCategory.Decks = new List<Deck>();
             langCategory.Title = "German";
             langCategory.Description = "Decks that are useful for learning German";
-            langCategory.User = owner;
+            langCategory.UserId = owner.Id;
             langCategory.DateCreated = DateTime.Now;
             langCategory.DateTouched = DateTime.Now;
             langCategory.DateUpdated = DateTime.Now;
@@ -179,7 +179,7 @@ namespace echoStudy_webAPI.Data
             germanDeck1.Access = Access.Public;
             germanDeck1.DefaultFrontLang = Language.German;
             germanDeck1.DefaultBackLang = Language.English;
-            germanDeck1.User = owner;
+            germanDeck1.UserId = owner.Id;
             DateTime date1 = DateTime.Now.Add(randomTimeSpan());
             germanDeck1.DateCreated = date1;
             germanDeck1.DateTouched = date1.Add(randomTimeSpan());
@@ -200,7 +200,7 @@ namespace echoStudy_webAPI.Data
             germanDeck2.Access = Access.Public;
             germanDeck2.DefaultFrontLang = Language.German;
             germanDeck2.DefaultBackLang = Language.English;
-            germanDeck2.User = owner;
+            germanDeck2.UserId = owner.Id;
             DateTime date2 = DateTime.Now.Add(randomTimeSpan());
             germanDeck2.DateCreated = date2;
             germanDeck2.DateTouched = date2.Add(randomTimeSpan());
@@ -221,7 +221,7 @@ namespace echoStudy_webAPI.Data
             germanDeck3.Access = Access.Private;
             germanDeck3.DefaultFrontLang = Language.German;
             germanDeck3.DefaultBackLang = Language.English;
-            germanDeck3.User = owner;
+            germanDeck3.UserId = owner.Id;
             DateTime date3 = DateTime.Now.Add(randomTimeSpan());
             germanDeck3.DateCreated = date3;
             germanDeck3.DateTouched = date3.Add(randomTimeSpan());
@@ -269,7 +269,7 @@ namespace echoStudy_webAPI.Data
             langCategory.Decks = new List<Deck>();
             langCategory.Title = "Spanish";
             langCategory.Description = "Decks that are useful for learning Spanish";
-            langCategory.User = owner;
+            langCategory.UserId = owner.Id;
             langCategory.DateCreated = DateTime.Now;
             langCategory.DateTouched = DateTime.Now;
             langCategory.DateUpdated = DateTime.Now;
@@ -283,7 +283,7 @@ namespace echoStudy_webAPI.Data
             spanishDeck1.Access = Access.Public;
             spanishDeck1.DefaultFrontLang = Language.Spanish;
             spanishDeck1.DefaultBackLang = Language.English;
-            spanishDeck1.User = owner;
+            spanishDeck1.UserId = owner.Id;
             DateTime date1 = DateTime.Now.Add(randomTimeSpan());
             spanishDeck1.DateCreated = date1;
             spanishDeck1.DateTouched = date1.Add(randomTimeSpan());
@@ -304,7 +304,7 @@ namespace echoStudy_webAPI.Data
             spanishDeck2.Access = Access.Public;
             spanishDeck2.DefaultFrontLang = Language.Spanish;
             spanishDeck2.DefaultBackLang = Language.English;
-            spanishDeck2.User = owner;
+            spanishDeck2.UserId = owner.Id;
             DateTime date2 = DateTime.Now.Add(randomTimeSpan());
             spanishDeck2.DateCreated = date2;
             spanishDeck2.DateTouched = date2.Add(randomTimeSpan());
@@ -325,7 +325,7 @@ namespace echoStudy_webAPI.Data
             spanishDeck3.Access = Access.Private;
             spanishDeck3.DefaultFrontLang = Language.English;
             spanishDeck3.DefaultBackLang = Language.Spanish;
-            spanishDeck3.User = owner;
+            spanishDeck3.UserId = owner.Id;
             DateTime date3 = DateTime.Now.Add(randomTimeSpan());
             spanishDeck3.DateCreated = date3;
             spanishDeck3.DateTouched = date3.Add(randomTimeSpan());

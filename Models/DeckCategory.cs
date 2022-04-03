@@ -23,7 +23,7 @@ namespace echoStudy_webAPI.Models
         public virtual ICollection<Deck> Decks { get; set; }
 
         [ForeignKey("EchoUser")]
-        public virtual EchoUser User { get; set; }
+        public virtual string UserId { get; set; }
 
         // These values should be manually handled in the controller
         [ScaffoldColumn(false)]

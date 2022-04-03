@@ -34,7 +34,7 @@ namespace echoStudy_webAPI.Models
         public Language DefaultBackLang { get; set; }
 
         [ForeignKey("EchoUser")]
-        public virtual EchoUser User { get; set; }
+        public virtual string UserId { get; set; }
 
         public virtual ICollection<DeckCategory> DeckCategories { get; set; }
         public virtual ICollection<Card> Cards { get; set; }
