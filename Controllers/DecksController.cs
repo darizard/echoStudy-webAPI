@@ -202,6 +202,44 @@ namespace echoStudy_webAPI.Controllers
             return await query.ToListAsync();
         }
 
+        /**
+        * Gets the deck category that owns a given deck id belonging to a given deck category
+        */
+        // GET: api/Decks/DeckCategory=2
+        [HttpGet("/api/Decks/DeckCategory={categoryId}")]
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDeckCategoryDecks(int categoryId)
+        {
+            // Grab the deck category. Only possible for one or zero results since ids are unique.
+            var deckCategoryQuery = from dc in _context.DeckCategories
+                            where dc.CategoryID == categoryId
+                            select dc;
+            if (deckCategoryQuery.Count() == 0)
+            {
+                return BadRequest("Category id " + categoryId + " does not exist");
+            }
+            else
+            {
+                DeckCategory deckCategory = deckCategoryQuery.First();
+                var query = from d in _context.Decks
+                            where d.DeckCategories.Contains(deckCategory)
+                            select new DeckInfo
+                            {
+                                id = d.DeckID,
+                                title = d.Title,
+                                description = d.Description,
+                                access = d.Access.ToString(),
+                                default_flang = d.DefaultFrontLang.ToString(),
+                                default_blang = d.DefaultBackLang.ToString(),
+                                cards = d.Cards.Select(c => c.CardID).ToList(),
+                                ownerId = d.UserId,
+                                date_created = d.DateCreated,
+                                date_touched = d.DateTouched,
+                                date_updated = d.DateUpdated
+                            };
+                return await query.ToListAsync();
+            }
+        }
+
         // PUT: api/Decks/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
@@ -527,7 +565,7 @@ namespace echoStudy_webAPI.Controllers
         /*
  * Updates the given card by id 
  */
-        // PATCH: api/Cards/5
+        // PATCH: api/Decks/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchDeck(int id, PostDeckInfo deckInfo)
@@ -656,10 +694,10 @@ namespace echoStudy_webAPI.Controllers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    return BadRequest("Failed to update card");
+                    return BadRequest("Failed to update deck");
                 }
 
-                return Ok(new { message = "Card was successfully updated.", deck });
+                return Ok(new { message = "Deck was successfully updated.", deck });
             }
         }
 
@@ -690,7 +728,7 @@ namespace echoStudy_webAPI.Controllers
                 // Mark the card as modified
                 _context.Entry(deck).State = EntityState.Modified;
 
-                return Ok(new { message = "Card was successfully touched.", deck });
+                return Ok(new { message = "Deck was successfully touched.", deck });
             }
         }
 
