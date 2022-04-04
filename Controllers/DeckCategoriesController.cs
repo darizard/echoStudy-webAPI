@@ -510,6 +510,7 @@ namespace echoStudy_webAPI.Controllers
 
                 // Mark the card as modified
                 _context.Entry(deckCategory).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Deck category was successfully touched.", deckCategory});
             }

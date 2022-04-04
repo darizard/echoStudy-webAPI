@@ -36,9 +36,6 @@ namespace echoStudy_webAPI.Models
         public int DeckID { get; set; }
 
         [Required]
-        public Deck Deck { get; set; }
-
-        [Required]
         public virtual ICollection<Card> CardsPlayed { get; set; }
 
         // These values should be manually handled in the controller

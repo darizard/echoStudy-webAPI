@@ -254,6 +254,7 @@ namespace echoStudy_webAPI.Controllers
 
                 // Mark the card as modified
                 _context.Entry(card).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Card was successfully touched.", card });
             }

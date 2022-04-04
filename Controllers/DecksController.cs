@@ -563,7 +563,7 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /*
- * Updates the given card by id 
+ * Updates the given deck by id 
  */
         // PATCH: api/Decks/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
@@ -573,12 +573,12 @@ namespace echoStudy_webAPI.Controllers
             var deckQuery = from d in _context.Decks.Include(d => d.Cards)
                             where d.DeckID == id
                             select d;
-            // Create the card
+            // Create the deck
             if (deckQuery.Count() == 0)
             {
                 return BadRequest("Deck " + id + " does not exist");
             }
-            // Update the card
+            // Update the deck
             else
             {
                 Deck deck = deckQuery.First();
@@ -702,8 +702,8 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /*
-* Updates the given card by id 
-*/
+        * Updates the given deck by id 
+        */
         // PATCH: api/Decks/Touch=1
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("Touch={id}")]
@@ -727,6 +727,7 @@ namespace echoStudy_webAPI.Controllers
 
                 // Mark the card as modified
                 _context.Entry(deck).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Deck was successfully touched.", deck });
             }
