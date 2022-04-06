@@ -358,7 +358,7 @@ namespace echoStudy_webAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Session>> PostSession(PostSessionInfo sessionInfo)
         {
-            // Create and populate a deck with the given info
+            // Create and populate a session with the given info
             Session session = new Session();
             session.MaxCards = sessionInfo.max_cards;
             session.Device = sessionInfo.device;
