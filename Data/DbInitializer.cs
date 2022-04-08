@@ -14,6 +14,8 @@ namespace echoStudy_webAPI.Data
 {
     public class DbInitializer
     {
+        private static uint positionCounter = 0;
+
         /**
          * Initializes EchoStudyDB and seeds data
          */
@@ -29,7 +31,7 @@ namespace echoStudy_webAPI.Data
         public static void CreateEchoStudyDB(EchoStudyDB echoContext, EchoStudyUsersRolesDB identityContext)
         {
             // Create the DB if needed
-            echoContext.Database.EnsureCreated();
+            echoContext.Database.Migrate();
             // Migrate Identity
             identityContext.Database.Migrate();
 
@@ -132,21 +134,27 @@ namespace echoStudy_webAPI.Data
             // Add everything to the database and save
             context.DeckCategories.Add(langCategory);
 
+            positionCounter = 0;
             context.Decks.Add(japaneseDeck1);
             foreach (Card card in japaneseCards1)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
 
+            positionCounter = 0;
             context.Decks.Add(japaneseDeck2);
             foreach (Card card in japaneseCards2)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
 
+            positionCounter = 0;
             context.Decks.Add(japaneseDeck3);
             foreach (Card card in japaneseCards3)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
 
@@ -237,20 +245,26 @@ namespace echoStudy_webAPI.Data
             context.DeckCategories.Add(langCategory);
 
             context.Decks.Add(germanDeck1);
+            positionCounter = 0;
             foreach (Card card in germanCards1)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
 
+            positionCounter = 0;
             context.Decks.Add(germanDeck2);
             foreach (Card card in germanCards2)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
 
+            positionCounter = 0;
             context.Decks.Add(germanDeck3);
             foreach (Card card in germanCards3)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
 
@@ -340,18 +354,27 @@ namespace echoStudy_webAPI.Data
             // Add everything to the database and save
             context.DeckCategories.Add(langCategory);
             context.Decks.Add(spanishDeck1);
+
+            positionCounter = 0;
             foreach (Card card in spanishCards1)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
             context.Decks.Add(spanishDeck2);
+
+            positionCounter = 0;
             foreach (Card card in spanishCards2)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
             context.Decks.Add(spanishDeck3);
+
+            positionCounter = 0;
             foreach (Card card in spanishCards3)
             {
+                card.DeckPosition = positionCounter++;
                 context.Cards.Add(card);
             }
             context.SaveChanges();
@@ -371,7 +394,6 @@ namespace echoStudy_webAPI.Data
             {
                 string[] splitCard = cardsStrings[i].Split('@');
                 Card card = new Card();
-                card.Decks = new List<Deck>();
                 // TODO: Audio files
                 card.FrontAudio = "todo";
                 card.BackAudio = "todo";
@@ -385,7 +407,7 @@ namespace echoStudy_webAPI.Data
                 card.DateCreated = date;
                 card.DateTouched = date.Add(randomTimeSpan());
                 card.DateUpdated = date.Add(randomTimeSpan());
-                card.Decks.Add(deck);
+                card.Deck = deck;
                 cards[i] = card;
             }
 

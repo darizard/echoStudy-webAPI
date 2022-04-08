@@ -38,9 +38,16 @@ namespace echoStudy_webAPI.Models
         public Language BackLang { get; set; }
 
         [ForeignKey("EchoUser")]
-        public virtual string UserId { get; set; } 
+        public string UserId { get; set; } 
 
-        public virtual ICollection<Deck> Decks { get; set; }
+        public virtual Deck Deck { get; set; }
+
+        // unique composite key of DeckID and DeckPosition configured in EchoStudyDB.cs
+        [Required]
+        [ForeignKey("Deck")]
+        public int DeckID { get; set; }
+        [Required]
+        public uint DeckPosition { get; set; }
 
         // These values should be manually handled in the controller
         [ScaffoldColumn(false)]

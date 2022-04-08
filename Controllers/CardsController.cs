@@ -38,7 +38,7 @@ namespace echoStudy_webAPI.Controllers
             public string baud { get; set; }
             public string flang { get; set; }
             public string blang { get; set; }
-            public List<int> decks { get; set; }
+            public Deck deck { get; set; }
             public int score { get; set; }
             public string ownerId { get; set; }
             public DateTime date_created { get; set; }
@@ -56,7 +56,7 @@ namespace echoStudy_webAPI.Controllers
             public string frontLang { get; set; }
             public string backLang { get; set; }
             public string userEmail { get; set; }
-            public List<int> deckIds { get; set; }
+            public Deck deck { get; set; }
         }
 
         /**
@@ -76,7 +76,7 @@ namespace echoStudy_webAPI.Controllers
                             baud = c.BackAudio,
                             flang = c.FrontLang.ToString(),
                             blang = c.BackLang.ToString(),
-                            decks = c.Decks.Select(d => d.DeckID).ToList(),
+                            deck = c.Deck,
                             score = c.Score,
                             ownerId = c.UserId,
                             date_created = c.DateCreated,
@@ -111,7 +111,7 @@ namespace echoStudy_webAPI.Controllers
                                 baud = c.BackAudio,
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
-                                decks = c.Decks.Select(d => d.DeckID).ToList(),
+                                deck = c.Deck,
                                 score = c.Score,
                                 ownerId = c.UserId,
                                 date_created = c.DateCreated,
@@ -141,7 +141,7 @@ namespace echoStudy_webAPI.Controllers
                                 baud = c.BackAudio,
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
-                                decks = c.Decks.Select(d => d.DeckID).ToList(),
+                                deck = c.Deck,
                                 score = c.Score,
                                 ownerId = c.UserId,
                                 date_created = c.DateCreated,
@@ -161,16 +161,16 @@ namespace echoStudy_webAPI.Controllers
             // Grab the deck. Only possible for one or zero results since ids are unique.
             var deckQuery = from d in _context.Decks
                         where d.DeckID == deckId
-                        select d;
-            if (deckQuery.Count() == 0)
+                        select d.DeckID;
+            if (!deckQuery.Any())
             {
                 return BadRequest("Deck id " + deckId + " does not exist");
             }
             else
             {
-                Deck deck = deckQuery.First();
+                int deck = deckQuery.First();
                 var query = from c in _context.Cards
-                            where c.Decks.Contains(deck)
+                            where c.Deck.DeckID == deck
                             select new CardInfo
                             {
                                 id = c.CardID,
@@ -180,7 +180,7 @@ namespace echoStudy_webAPI.Controllers
                                 baud = c.BackAudio,
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
-                                decks = c.Decks.Select(d => d.DeckID).ToList(),
+                                deck = c.Deck,
                                 score = c.Score,
                                 ownerId = c.UserId,
                                 date_created = c.DateCreated,
@@ -209,7 +209,7 @@ namespace echoStudy_webAPI.Controllers
                             baud = c.BackAudio,
                             flang = c.FrontLang.ToString(),
                             blang = c.BackLang.ToString(),
-                            decks = c.Decks.Select(d => d.DeckID).ToList(),
+                            deck = c.Deck,
                             score = c.Score,
                             ownerId = c.UserId,
                             date_created = c.DateCreated,
@@ -235,11 +235,11 @@ namespace echoStudy_webAPI.Controllers
         [HttpPatch("Touch={id}&{score}")]
         public async Task<IActionResult> TouchCard(int id, int score)
         {
-            var cardQuery = from c in _context.Cards.Include(c => c.Decks)
+            var cardQuery = from c in _context.Cards
                             where c.CardID == id
                             select c;
             // Card doesn't exist
-            if (cardQuery.Count() == 0)
+            if (!cardQuery.Any())
             {
                 return BadRequest("Card " + id + " does not exist");
             }
@@ -268,11 +268,11 @@ namespace echoStudy_webAPI.Controllers
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchCard(int id, PostCardInfo cardInfo)
         {
-            var cardQuery = from c in _context.Cards.Include(c => c.Decks)
+            var cardQuery = from c in _context.Cards
                         where c.CardID == id
                         select c;
             // Create the card
-            if (cardQuery.Count() == 0)
+            if (!cardQuery.Any())
             {
                 return BadRequest("Card " + id + " does not exist");
             }
@@ -306,42 +306,24 @@ namespace echoStudy_webAPI.Controllers
                     card.UserId = user.Id;
                 }
 
-                // Assign it to the decks given by id (if there is any)
-                HashSet<Deck> updatedDecks = new HashSet<Deck>();
-                foreach (int deckId in cardInfo.deckIds)
-                {
+                Deck updatedDeck = new Deck();
                     // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from d in _context.Decks.Include(d => d.Cards)
-                                where d.DeckID == deckId
-                                select d;
-                    if (query.Count() == 0)
-                    {
-                        return BadRequest("Deck id " + deckId + " does not exist");
-                    }
-                    else
-                    {
-                        Deck deck = query.First();
-                        // If they aren't already related, relate them
-                        if (!card.Decks.Contains(deck))
-                        {
-                            card.Decks.Add(deck);
-                            deck.Cards.Add(card);
-                        }
-                        updatedDecks.Add(deck);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
-                List<Deck> currentDecks = card.Decks.ToList();
-                // Unrelate any decks if needed
-                foreach(Deck deck in currentDecks)
+                var query = from d in _context.Decks.Include(d => d.Cards)
+                            where d.DeckID == cardInfo.deck.DeckID
+                            select d;
+                if (!query.Any())
                 {
-                    if (!updatedDecks.Contains(deck))
-                    {
-                        card.Decks.Remove(deck);
-                        deck.Cards.Remove(card);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
+                    return BadRequest("Deck id " + cardInfo.deck + " does not exist");
                 }
+
+                updatedDeck = query.First();
+                // If they aren't already related, relate them
+                if (card.Deck.DeckID != updatedDeck.DeckID)
+                {
+                    card.Deck = updatedDeck;
+                    updatedDeck.Cards.Add(card);
+                }
+                _context.Entry(updatedDeck).State = EntityState.Modified;
 
                 // Change update date
                 card.DateUpdated = DateTime.Now;
@@ -371,11 +353,11 @@ namespace echoStudy_webAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCard(int id, PostCardInfo cardInfo)
         {
-            var cardQuery = from c in _context.Cards.Include(c => c.Decks)
+            var cardQuery = from c in _context.Cards
                             where c.CardID == id
                             select c;
             // Create the card
-            if (cardQuery.Count() == 0)
+            if (!cardQuery.Any())
             {
                 // Create a card and assign it all of the basic provided data
                 Card card = new Card();
@@ -429,26 +411,10 @@ namespace echoStudy_webAPI.Controllers
                 {
                     card.UserId = user.Id;
                 }
-                // Assign it to the decks given by id (if there is any)
-                card.Decks = new List<Deck>();
-                foreach (int deckId in cardInfo.deckIds)
-                {
-                    // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from d in _context.Decks.Include(d => d.Cards)
-                                where d.DeckID == deckId
-                                select d;
-                    if (query.Count() == 0)
-                    {
-                        return BadRequest("Deck id " + deckId + " does not exist");
-                    }
-                    else
-                    {
-                        Deck deck = query.First();
-                        card.Decks.Add(deck);
-                        deck.Cards.Add(card);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
+
+                // Assign it to the deck given by id
+                card.Deck = cardInfo.deck;
+
                 // Assign it dates and a score of 0
                 card.DateCreated = DateTime.Now;
                 card.DateTouched = DateTime.Now;
@@ -490,41 +456,7 @@ namespace echoStudy_webAPI.Controllers
                 }
 
                 // Assign it to the decks given by id (if there is any)
-                HashSet<Deck> updatedDecks = new HashSet<Deck>();
-                foreach (int deckId in cardInfo.deckIds)
-                {
-                    // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from d in _context.Decks.Include(d => d.Cards)
-                                where d.DeckID == deckId
-                                select d;
-                    if (query.Count() == 0)
-                    {
-                        return BadRequest("Deck id " + deckId + " does not exist");
-                    }
-                    else
-                    {
-                        Deck deck = query.First();
-                        // If they aren't already related, relate them
-                        if (!card.Decks.Contains(deck))
-                        {
-                            card.Decks.Add(deck);
-                            deck.Cards.Add(card);
-                        }
-                        updatedDecks.Add(deck);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
-                List<Deck> currentDecks = card.Decks.ToList();
-                // Unrelate any decks if needed
-                foreach (Deck deck in currentDecks)
-                {
-                    if (!updatedDecks.Contains(deck))
-                    {
-                        card.Decks.Remove(deck);
-                        deck.Cards.Remove(card);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
+                card.Deck = cardInfo.deck;
 
                 // Change update date
                 card.DateUpdated = DateTime.Now;
@@ -606,25 +538,8 @@ namespace echoStudy_webAPI.Controllers
                 card.UserId = user.Id;
             }
             // Assign it to the decks given by id (if there is any)
-            card.Decks = new List<Deck>();
-            foreach(int deckId in cardInfo.deckIds)
-            {
-                // Grab the deck. Only possible for one or zero results since ids are unique.
-                var query = from d in _context.Decks.Include(d => d.Cards)
-                            where d.DeckID == deckId
-                            select d;
-                if(query.Count() == 0)
-                {
-                    return BadRequest("Deck id " + deckId + " does not exist");
-                }
-                else
-                {
-                    Deck deck = query.First();
-                    card.Decks.Add(deck);
-                    deck.Cards.Add(card);
-                    _context.Entry(deck).State = EntityState.Modified;
-                }
-            }
+            card.Deck = cardInfo.deck;
+            
             // Assign it dates and a score of 0
             card.DateCreated = DateTime.Now;
             card.DateTouched = DateTime.Now;

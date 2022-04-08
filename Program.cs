@@ -41,6 +41,8 @@ namespace echoStudy_webAPI
                     DbInitializer.CreateEchoStudyDB(echoContext, identityContext);
                     await IdentityInitializer.Initialize(host);
                     await DbInitializer.InitializeEchoStudyDb(echoContext, userManager);
+
+                    await echoContext.Database.MigrateAsync();
                 }
                 catch (Exception ex)
                 {

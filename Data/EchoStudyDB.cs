@@ -18,5 +18,11 @@ namespace echoStudy_webAPI.Models
         public DbSet<DeckCategory> DeckCategories{ get; set; }
         public DbSet<Session> Sessions{ get; set; }
         
+        // enforce uniqueness of ( Deck, DeckPosition ) tuples
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Card>()
+                .HasAlternateKey(o => new { o.DeckID, o.DeckPosition });
+        }
     }
 }

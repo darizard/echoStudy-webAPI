@@ -249,7 +249,7 @@ namespace echoStudy_webAPI.Controllers
                             where d.DeckID == id
                             select d;
             // Create the deck
-            if (deckQuery.Count() == 0)
+            if (!deckQuery.Any())
             {
                 // Create and populate a deck with the given info
                 Deck deck = new Deck();
@@ -306,17 +306,17 @@ namespace echoStudy_webAPI.Controllers
                 foreach (int cardId in deckInfo.cardIds)
                 {
                     // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from c in _context.Cards.Include(d => d.Decks)
+                    var query = from c in _context.Cards
                                 where c.CardID == cardId
                                 select c;
-                    if (query.Count() == 0)
+                    if (!query.Any())
                     {
                         return BadRequest("Deck id " + cardId + " does not exist");
                     }
                     else
                     {
                         Card card = query.First();
-                        card.Decks.Add(deck);
+                        card.Deck = deck;
                         deck.Cards.Add(card);
                         _context.Entry(card).State = EntityState.Modified;
                     }
@@ -414,7 +414,7 @@ namespace echoStudy_webAPI.Controllers
                 foreach (int cardId in deckInfo.cardIds)
                 {
                     // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from c in _context.Cards.Include(d => d.Decks)
+                    var query = from c in _context.Cards
                                 where c.CardID == cardId
                                 select c;
                     if (query.Count() == 0)
@@ -427,21 +427,10 @@ namespace echoStudy_webAPI.Controllers
                         // If they aren't already related, relate them
                         if (!deck.Cards.Contains(card))
                         {
-                            card.Decks.Add(deck);
+                            card.Deck = deck;
                             deck.Cards.Add(card);
                         }
                         updatedCards.Add(card);
-                        _context.Entry(card).State = EntityState.Modified;
-                    }
-                }
-                List<Card> currentCards = deck.Cards.ToList();
-                // Unrelate any decks if needed
-                foreach (Card card in currentCards)
-                {
-                    if (!updatedCards.Contains(card))
-                    {
-                        card.Decks.Remove(deck);
-                        deck.Cards.Remove(card);
                         _context.Entry(card).State = EntityState.Modified;
                     }
                 }
@@ -525,7 +514,7 @@ namespace echoStudy_webAPI.Controllers
             foreach (int cardId in deckInfo.cardIds)
             {
                 // Grab the deck. Only possible for one or zero results since ids are unique.
-                var query = from c in _context.Cards.Include(d => d.Decks)
+                var query = from c in _context.Cards
                             where c.CardID == cardId
                             select c;
                 if (query.Count() == 0)
@@ -535,7 +524,7 @@ namespace echoStudy_webAPI.Controllers
                 else
                 {
                     Card card = query.First();
-                    card.Decks.Add(deck);
+                    card.CardID = deck.DeckID;
                     deck.Cards.Add(card);
                     _context.Entry(card).State = EntityState.Modified;
                 }
@@ -650,7 +639,7 @@ namespace echoStudy_webAPI.Controllers
                 foreach (int cardId in deckInfo.cardIds)
                 {
                     // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from c in _context.Cards.Include(d => d.Decks)
+                    var query = from c in _context.Cards
                                 where c.CardID == cardId
                                 select c;
                     if (query.Count() == 0)
@@ -663,21 +652,10 @@ namespace echoStudy_webAPI.Controllers
                         // If they aren't already related, relate them
                         if (!deck.Cards.Contains(card))
                         {
-                            card.Decks.Add(deck);
+                            card.Deck = deck;
                             deck.Cards.Add(card);
                         }
                         updatedCards.Add(card);
-                        _context.Entry(card).State = EntityState.Modified;
-                    }
-                }
-                List<Card> currentCards = deck.Cards.ToList();
-                // Unrelate any decks if needed
-                foreach (Card card in currentCards)
-                {
-                    if (!updatedCards.Contains(card))
-                    {
-                        card.Decks.Remove(deck);
-                        deck.Cards.Remove(card);
                         _context.Entry(card).State = EntityState.Modified;
                     }
                 }
