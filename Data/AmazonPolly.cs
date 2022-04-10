@@ -19,9 +19,10 @@ namespace echoStudy_webAPI.Data
         /**
          * Creates an audio file of the given text utilizing Amazon Polly 
          * This audio file will be saved to an S3 bucket
-         * If the text has already been translated, nothing will happen
+         * If the text has already been translated, nothing will happen.
+         * Returns the file name
          */
-        public static void createTextToSpeechAudio(string text, Language language)
+        public static string createTextToSpeechAudio(string text, Language language)
         {
             // Only fetch the audio from the API if it doesn't already exist
             bool fileExists = AmazonUploader.fileExists(Resources.bucketName, text, language).Result;
@@ -33,7 +34,7 @@ namespace echoStudy_webAPI.Data
 
                 // Initialize the parameters of both requests
                 voiceReq.IncludeAdditionalLanguageCodes = false;
-                speechReq.Engine = voiceReq.Engine = Engine.Standard;
+                speechReq.Engine = Engine.Neural;
                 speechReq.OutputFormat = OutputFormat.Mp3;
                 speechReq.Text = text;
                 speechReq.TextType = TextType.Text;
@@ -51,26 +52,35 @@ namespace echoStudy_webAPI.Data
                     case Language.Japanese:
                         speechReq.LanguageCode = voiceReq.LanguageCode = LanguageCode.JaJP;
                         break;
-                    default:
-                        return;
                 }
                 
 
                 // Send the voice request and retrieve the voiceId for the speech request
                 DescribeVoicesResponse voiceResp = client.DescribeVoicesAsync(voiceReq).Result;
+                bool neuralFound = false;
                 foreach (Voice voice in voiceResp.Voices)
                 {
-                    if (voice.SupportedEngines.Contains(Engine.Standard))
+                    if (voice.SupportedEngines.Contains(Engine.Neural))
                     {
                         speechReq.VoiceId = voice.Id;
+                        neuralFound = true;
                         break;
                     }
                 }
+                if (!neuralFound)
+                {
+                    speechReq.Engine = Engine.Standard;
+                    speechReq.VoiceId = voiceResp.Voices.First().Id;
+                }
 
-                // Send the request and upload the file
+                // Send the request
                 SynthesizeSpeechResponse resp = client.SynthesizeSpeechAsync(speechReq).Result;
+
+                // Upload the file
                 AmazonUploader.uploadAudioFile(resp, text, language);
             }
+            // Return the file name
+            return AmazonUploader.getFileName(text, language);
         }
     }
 }

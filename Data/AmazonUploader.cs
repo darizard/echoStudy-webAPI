@@ -82,7 +82,7 @@ namespace echoStudy_webAPI.Data
         /**
          * Gets the file name that should be used for a given text and language
          */
-        private static string getFileName(string text, Language language)
+        public static string getFileName(string text, Language language)
         {
             return language.ToString() + " " + text + ".mp3";
         }
