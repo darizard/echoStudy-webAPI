@@ -34,9 +34,9 @@ namespace echoStudy_webAPI
                 try
                 {
                     var echoContext = services.GetRequiredService<EchoStudyDB>();
-                    var environment = services.GetRequiredService<IWebHostEnvironment>();
                     var identityContext = services.GetRequiredService<EchoStudyUsersRolesDB>();
                     var userManager = services.GetService<UserManager<EchoUser>>();
+                    AmazonPolly.createTextToSpeechAudio("Hello my name is jeffrey!", Language.English);
 
                     DbInitializer.CreateEchoStudyDB(echoContext, identityContext);
                     await IdentityInitializer.Initialize(host);
