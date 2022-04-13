@@ -13,7 +13,7 @@ using System.Net.Http;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class CardsController : ControllerBase
     {
@@ -90,7 +90,7 @@ namespace echoStudy_webAPI.Controllers
          * Gets all cards belonging to the given user provided by email
          */
         // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/api/Cards/UserEmail={userEmail}")]
+        [HttpGet("/Cards/UserEmail={userEmail}")]
         public async Task<ActionResult<IEnumerable<CardInfo>>> GetUserCardsByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
@@ -127,7 +127,7 @@ namespace echoStudy_webAPI.Controllers
          * Gets all cards belonging to the given user
          */
         // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/api/Cards/User={userId}")]
+        [HttpGet("/Cards/User={userId}")]
         public async Task<ActionResult<IEnumerable<CardInfo>>> GetUserCards(string userId)
         {
                 var query = from c in _context.Cards
@@ -155,7 +155,7 @@ namespace echoStudy_webAPI.Controllers
          * Gets all cards belonging to a given deck
          */
         // GET: api/Cards/Deck=2
-        [HttpGet("/api/Cards/Deck={deckId}")]
+        [HttpGet("/Cards/Deck={deckId}")]
         public async Task<ActionResult<IEnumerable<CardInfo>>> GetDeckCards(int deckId)
         {
             // Grab the deck. Only possible for one or zero results since ids are unique.
@@ -574,7 +574,7 @@ namespace echoStudy_webAPI.Controllers
          * Deletes all cards associated with one user
          */
         // DELETE: api/Cards/5
-        [HttpDelete("/api/Cards/DeleteUserCards={userId}")]
+        [HttpDelete("/Cards/DeleteUserCards={userId}")]
         public async Task<IActionResult> DeleteUserCards(string userId)
         {
             var query = from c in _context.Cards
@@ -596,7 +596,7 @@ namespace echoStudy_webAPI.Controllers
  * Deletes all cards associated with one user
  */
         // DELETE: api/Cards/5
-        [HttpDelete("/api/Cards/DeleteUserCardsByEmail={userEmail}")]
+        [HttpDelete("/Cards/DeleteUserCardsByEmail={userEmail}")]
         public async Task<IActionResult> DeleteUserCardsByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
@@ -625,7 +625,7 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Deletes all cards associated with a deck
          */
-        [HttpDelete("/api/Cards/DeleteDeckCards={deckId}")]
+        [HttpDelete("/Cards/DeleteDeckCards={deckId}")]
         public async Task<IActionResult> DeleteDeckCards(int deckId)
         {
             // Grab the deck. Only possible for one or zero results since ids are unique.
