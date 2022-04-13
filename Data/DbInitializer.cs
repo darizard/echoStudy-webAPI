@@ -14,8 +14,6 @@ namespace echoStudy_webAPI.Data
 {
     public class DbInitializer
     {
-        private static uint positionCounter = 0;
-
         /**
          * Initializes EchoStudyDB and seeds data
          */
@@ -34,8 +32,6 @@ namespace echoStudy_webAPI.Data
             echoContext.Database.Migrate();
             // Migrate Identity
             identityContext.Database.Migrate();
-
-
         }
 
         /**
@@ -134,27 +130,27 @@ namespace echoStudy_webAPI.Data
             // Add everything to the database and save
             context.DeckCategories.Add(langCategory);
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             context.Decks.Add(japaneseDeck1);
             foreach (Card card in japaneseCards1)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             context.Decks.Add(japaneseDeck2);
             foreach (Card card in japaneseCards2)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             context.Decks.Add(japaneseDeck3);
             foreach (Card card in japaneseCards3)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
 
@@ -245,26 +241,26 @@ namespace echoStudy_webAPI.Data
             context.DeckCategories.Add(langCategory);
 
             context.Decks.Add(germanDeck1);
-            positionCounter = 0;
+            PositionInitializer.Init();
             foreach (Card card in germanCards1)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             context.Decks.Add(germanDeck2);
             foreach (Card card in germanCards2)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             context.Decks.Add(germanDeck3);
             foreach (Card card in germanCards3)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
 
@@ -355,26 +351,26 @@ namespace echoStudy_webAPI.Data
             context.DeckCategories.Add(langCategory);
             context.Decks.Add(spanishDeck1);
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             foreach (Card card in spanishCards1)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
             context.Decks.Add(spanishDeck2);
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             foreach (Card card in spanishCards2)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
             context.Decks.Add(spanishDeck3);
 
-            positionCounter = 0;
+            PositionInitializer.Init();
             foreach (Card card in spanishCards3)
             {
-                card.DeckPosition = positionCounter++;
+                card.DeckPosition = PositionInitializer.Next();
                 context.Cards.Add(card);
             }
             context.SaveChanges();
@@ -422,6 +418,51 @@ namespace echoStudy_webAPI.Data
             Random random = new Random();
             TimeSpan randomTime = new TimeSpan(random.Next(1),random.Next(23), random.Next(59), random.Next(59));
             return randomTime;
+        }
+
+        internal static class PositionInitializer
+        {
+            private static string currentPos = "";
+
+            public static void Init()
+            {
+                currentPos = "";
+            }
+
+            public static string Next()
+            {
+                if (currentPos.Length == 0) return (currentPos = "ia");
+
+                int posLen = currentPos.Length;
+                string retPos;
+
+                for(int i = posLen - 1; i >= 0; i--)
+                {
+                    if(currentPos[i] != 'z')
+                    {
+                        retPos = currentPos[..i];
+                        retPos += (char)(currentPos[i] + 1);
+                        if (i < posLen - 1)
+                        {
+                            retPos += currentPos[(i + 2)..];
+                            for(int j = i+1; j < posLen; j++)
+                            {
+                                retPos += 'a';
+                            }
+                        }
+                        currentPos = retPos;
+                        return retPos;
+                    }
+                }
+
+                currentPos = "";
+                for(int i = 0; i <= posLen; i++)
+                {
+                    currentPos += 'a';
+                }
+
+                return currentPos;
+            }
         }
     }
 

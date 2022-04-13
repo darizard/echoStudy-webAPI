@@ -47,7 +47,7 @@ namespace echoStudy_webAPI.Models
         [ForeignKey("Deck")]
         public int DeckID { get; set; }
         [Required]
-        public uint DeckPosition { get; set; }
+        public string DeckPosition { get; set; }
 
         // These values should be manually handled in the controller
         [ScaffoldColumn(false)]
