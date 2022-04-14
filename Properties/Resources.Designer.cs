@@ -61,7 +61,7 @@ namespace echoStudy_webAPI.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to AKIAX23YXKBF636ALX54.
+        ///   Looks up a localized string similar to AKIAXUVKXMAVKSXNJOTI.
         /// </summary>
         internal static string AWSAccessKeyId {
             get {
@@ -70,7 +70,7 @@ namespace echoStudy_webAPI.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Lr3d5mAOmEeLZeUOzXht7rN9gmC3Nt1owitw/RJ0.
+        ///   Looks up a localized string similar to LKq2iJWmfTDcgoPptH2EGLi35PIKu7c8FSuLINpsj/EvPBnhoj/J/A8MjtGVFZWtFsomouHM/w0ggh/H5VxSZjnDVeljBPZ9erYw7c0Hc1X6bHjukodgJ3uK9zsVTIr1.
         /// </summary>
         internal static string AWSSecretKey {
             get {
@@ -79,7 +79,7 @@ namespace echoStudy_webAPI.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to echostudybucket.
+        ///   Looks up a localized string similar to echostudy-audio.
         /// </summary>
         internal static string bucketName {
             get {

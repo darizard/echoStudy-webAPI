@@ -14,7 +14,7 @@ namespace echoStudy_webAPI.Data
      */
     public static class AmazonPolly
     {
-        private static AmazonPollyClient client = new AmazonPollyClient(Resources.AWSAccessKeyId, Resources.AWSSecretKey, RegionEndpoint.USWest2);
+        private static AmazonPollyClient client = new AmazonPollyClient(Resources.AWSAccessKeyId, EncryptionHelper.Decrypt(Resources.AWSSecretKey), RegionEndpoint.USWest2);
 
         /**
          * Creates an audio file of the given text utilizing Amazon Polly 

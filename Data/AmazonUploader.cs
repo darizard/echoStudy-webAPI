@@ -17,7 +17,7 @@ namespace echoStudy_webAPI.Data
      */
     public static class AmazonUploader
     {
-        private static AmazonS3Client client = new AmazonS3Client(Resources.AWSAccessKeyId, Resources.AWSSecretKey, RegionEndpoint.USWest2);
+        private static AmazonS3Client client = new AmazonS3Client(Resources.AWSAccessKeyId, EncryptionHelper.Decrypt(Resources.AWSSecretKey), RegionEndpoint.USWest2);
 
         /**
          * Uploads the audio stream associated with the SynthesizeSpeechResponse to an s3 bucket with a key name 

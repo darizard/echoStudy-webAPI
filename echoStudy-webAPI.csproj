@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>echoStudy_webAPI</RootNamespace>
+    <UserSecretsId>6e6bf779-690c-4db8-b747-dedef9762c82</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
