@@ -390,13 +390,12 @@ namespace echoStudy_webAPI.Data
             {
                 string[] splitCard = cardsStrings[i].Split('@');
                 Card card = new Card();
-                // TODO: Audio files
-                card.FrontAudio = "todo";
-                card.BackAudio = "todo";
                 card.FrontText = splitCard[0].Trim();
                 card.BackText = splitCard[1].Trim();
                 card.FrontLang = frontLang;
                 card.BackLang = backLang;
+                card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
+                card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 card.Score = 0;
                 card.UserId = owner.Id;
                 DateTime date = DateTime.Now.Add(randomTimeSpan());
