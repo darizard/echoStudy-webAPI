@@ -44,6 +44,15 @@ namespace echoStudy_webAPI
                     .Build();
             });
 
+            services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy",
+                    builder => builder
+                        .WithOrigins("http://localhost:3000/")
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials());
+            });
             
             services.AddSwaggerGen(c =>
             {
@@ -61,6 +70,8 @@ namespace echoStudy_webAPI
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "echoStudy_webAPI v1"));
             }
+
+            app.UseCors();
 
             app.UseHttpsRedirection();
 
