@@ -13,7 +13,7 @@ using System.Net.Http;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class CardsController : ControllerBase
     {
@@ -89,8 +89,8 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Gets all cards belonging to the given user provided by email
          */
-        // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/api/Cards/UserEmail={userEmail}")]
+        // GET: Cards/UserEmail=johndoe@gmail.com
+        [HttpGet("/Cards/UserEmail={userEmail}")]
         public async Task<ActionResult<IEnumerable<CardInfo>>> GetUserCardsByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
@@ -126,8 +126,8 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Gets all cards belonging to the given user
          */
-        // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/api/Cards/User={userId}")]
+        // GET: /Cards/User=96376b14-c18f-44bd-b82d-c3a29c1d041a
+        [HttpGet("/Cards/User={userId}")]
         public async Task<ActionResult<IEnumerable<CardInfo>>> GetUserCards(string userId)
         {
                 var query = from c in _context.Cards
@@ -154,8 +154,8 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Gets all cards belonging to a given deck
          */
-        // GET: api/Cards/Deck=2
-        [HttpGet("/api/Cards/Deck={deckId}")]
+        // GET: /Cards/Deck=2
+        [HttpGet("/Cards/Deck={deckId}")]
         public async Task<ActionResult<IEnumerable<CardInfo>>> GetDeckCards(int deckId)
         {
             // Grab the deck. Only possible for one or zero results since ids are unique.
@@ -194,7 +194,7 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Gets a single card given by id
          */
-        // GET: api/Cards/5
+        // GET: /Cards/5
         [HttpGet("{id}")]
         public async Task<ActionResult<CardInfo>> GetCard(int id)
         {
@@ -230,7 +230,7 @@ namespace echoStudy_webAPI.Controllers
         /*
  * "touches" given card by id
  */
-        // PATCH: api/Cards/5
+        // PATCH: /Cards/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("Touch={id}&{score}")]
         public async Task<IActionResult> TouchCard(int id, int score)
@@ -263,7 +263,7 @@ namespace echoStudy_webAPI.Controllers
         /*
          * Updates the given card by id 
          */
-        // PATCH: api/Cards/5
+        // PATCH: /Cards/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("{id}")]
         public async Task<IActionResult> PatchCard(int id, PostCardInfo cardInfo)
@@ -574,7 +574,7 @@ namespace echoStudy_webAPI.Controllers
          * Deletes all cards associated with one user
          */
         // DELETE: api/Cards/5
-        [HttpDelete("/api/Cards/DeleteUserCards={userId}")]
+        [HttpDelete("/Cards/DeleteUserCards={userId}")]
         public async Task<IActionResult> DeleteUserCards(string userId)
         {
             var query = from c in _context.Cards
@@ -596,7 +596,7 @@ namespace echoStudy_webAPI.Controllers
  * Deletes all cards associated with one user
  */
         // DELETE: api/Cards/5
-        [HttpDelete("/api/Cards/DeleteUserCardsByEmail={userEmail}")]
+        [HttpDelete("/Cards/DeleteUserCardsByEmail={userEmail}")]
         public async Task<IActionResult> DeleteUserCardsByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
@@ -625,7 +625,7 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Deletes all cards associated with a deck
          */
-        [HttpDelete("/api/Cards/DeleteDeckCards={deckId}")]
+        [HttpDelete("/Cards/DeleteDeckCards={deckId}")]
         public async Task<IActionResult> DeleteDeckCards(int deckId)
         {
             // Grab the deck. Only possible for one or zero results since ids are unique.
