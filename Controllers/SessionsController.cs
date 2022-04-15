@@ -12,7 +12,7 @@ using echoStudy_webAPI.Areas.Identity.Data;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class SessionsController : ControllerBase
     {
@@ -113,7 +113,7 @@ namespace echoStudy_webAPI.Controllers
 * Gets all sessions belonging to the given user provided by email
 */
         // GET: api/Sessions/User=johndoe@gmail.com
-        [HttpGet("/api/Sessions/UserEmail={userEmail}")]
+        [HttpGet("/Sessions/UserEmail={userEmail}")]
         public async Task<ActionResult<IEnumerable<SessionInfo>>> GetUserSessionsByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
@@ -149,7 +149,7 @@ namespace echoStudy_webAPI.Controllers
          * Gets all sessions belonging to the given user
          */
         // GET: api/Sessions/User=johndoe@gmail.com
-        [HttpGet("/api/Sessions/User={userId}")]
+        [HttpGet("/Sessions/User={userId}")]
         public async Task<ActionResult<IEnumerable<SessionInfo>>> GetUserSessions(string userId)
         {
             var query = from s in _context.Sessions
@@ -643,7 +643,7 @@ namespace echoStudy_webAPI.Controllers
         * Deletes all decks associated with one user
         */
         // DELETE: api/Sessions/5
-        [HttpDelete("/api/Sessions/DeleteUserSessions={userId}")]
+        [HttpDelete("/Sessions/DeleteUserSessions={userId}")]
         public async Task<IActionResult> DeleteUserSessions(string userId)
         {
             var query = from s in _context.Sessions
@@ -665,7 +665,7 @@ namespace echoStudy_webAPI.Controllers
          * Deletes all decks associated with one user
          */
         // DELETE: api/Decks/DeleteUserDecksByEmail=johnDoe@gmail.com
-        [HttpDelete("/api/Sessions/DeleteUserSessionsByEmail={userEmail}")]
+        [HttpDelete("/Sessions/DeleteUserSessionsByEmail={userEmail}")]
         public async Task<IActionResult> DeleteUserDecksByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);

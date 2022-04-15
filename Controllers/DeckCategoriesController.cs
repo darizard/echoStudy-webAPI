@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class DeckCategoriesController : ControllerBase
     {
@@ -100,7 +100,7 @@ namespace echoStudy_webAPI.Controllers
         * Gets all deck categories belonging to the given user provided by email
         */
         // GET: api/DeckCategories/UserEmail=johndoe@gmail.com
-        [HttpGet("/api/DeckCategories/UserEmail={userEmail}")]
+        [HttpGet("/DeckCategories/UserEmail={userEmail}")]
         public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetUserDeckCategoriesByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
@@ -132,7 +132,7 @@ namespace echoStudy_webAPI.Controllers
          * Gets all deck categories belonging to the given user
          */
         // GET: api/DeckCategories/User=25c35795-ce2c-414a-ba58-152d475ba818
-        [HttpGet("/api/DeckCategories/User={userId}")]
+        [HttpGet("/DeckCategories/User={userId}")]
         public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetUserDeckCategories(string userId)
         {
             var query = from dc in _context.DeckCategories
@@ -155,7 +155,7 @@ namespace echoStudy_webAPI.Controllers
         * Gets the deck categories that owns a given deck id belonging to a given deck category
         */
         // GET: api/DeckCategories/GetDecks/categoryId=2
-        [HttpGet("api/DeckCategories/Deck={deckId}")]
+        [HttpGet("/DeckCategories/Deck={deckId}")]
         public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetOwnerDeckCategory(int deckId)
         {
             // Grab the deck. Only possible for one or zero results since ids are unique.
@@ -520,7 +520,7 @@ namespace echoStudy_webAPI.Controllers
         * Deletes all deck categories associated with one user
         */
         // DELETE: /api/DeckCategories/DeleteUserDeckCategories=25c35795-ce2c-414a-ba58-152d475ba818
-        [HttpDelete("/api/DeckCategories/DeleteUserDeckCategories={userId}")]
+        [HttpDelete("/DeckCategories/DeleteUserDeckCategories={userId}")]
         public async Task<IActionResult> DeleteUserDecks(string userId)
         {
             var query = from dc in _context.DeckCategories
@@ -542,7 +542,7 @@ namespace echoStudy_webAPI.Controllers
          * Deletes all decks associated with one user
          */
         // DELETE: api/DeckCategories/DeleteUserDeckCategoriesByEmail=johnDoe@gmail.com
-        [HttpDelete("/api/DeckCategories/DeleteUserDeckCategoriesByEmail={userEmail}")]
+        [HttpDelete("/DeckCategories/DeleteUserDeckCategoriesByEmail={userEmail}")]
         public async Task<IActionResult> DeleteUserDecksByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);

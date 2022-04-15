@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class DecksController : ControllerBase
     {
@@ -145,7 +145,7 @@ namespace echoStudy_webAPI.Controllers
  * Gets all cards belonging to the given user provided by email
  */
         // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/api/Decks/UserEmail={userEmail}")]
+        [HttpGet("/Decks/UserEmail={userEmail}")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetUserDecksByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
@@ -180,7 +180,7 @@ namespace echoStudy_webAPI.Controllers
          * Gets all cards belonging to the given user
          */
         // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/api/Decks/User={userId}")]
+        [HttpGet("/Decks/User={userId}")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetUserDecks(string userId)
         {
             var query = from d in _context.Decks
@@ -206,7 +206,7 @@ namespace echoStudy_webAPI.Controllers
         * Gets the deck category that owns a given deck id belonging to a given deck category
         */
         // GET: api/Decks/DeckCategory=2
-        [HttpGet("/api/Decks/DeckCategory={categoryId}")]
+        [HttpGet("/Decks/DeckCategory={categoryId}")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDeckCategoryDecks(int categoryId)
         {
             // Grab the deck category. Only possible for one or zero results since ids are unique.
@@ -731,7 +731,7 @@ namespace echoStudy_webAPI.Controllers
         * Deletes all decks associated with one user
         */
         // DELETE: api/Cards/5
-        [HttpDelete("/api/Decks/DeleteUserDecks={userId}")]
+        [HttpDelete("/Decks/DeleteUserDecks={userId}")]
         public async Task<IActionResult> DeleteUserDecks(string userId)
         {
             var query = from d in _context.Decks
@@ -753,7 +753,7 @@ namespace echoStudy_webAPI.Controllers
          * Deletes all decks associated with one user
          */
         // DELETE: api/Decks/DeleteUserDecksByEmail=johnDoe@gmail.com
-        [HttpDelete("/api/Decks/DeleteUserDecksByEmail={userEmail}")]
+        [HttpDelete("/Decks/DeleteUserDecksByEmail={userEmail}")]
         public async Task<IActionResult> DeleteUserDecksByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
