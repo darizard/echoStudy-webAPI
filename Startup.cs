@@ -8,12 +8,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.PlatformAbstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Reflection;
+using System.IO;
 
 namespace echoStudy_webAPI
 {
@@ -53,10 +56,15 @@ namespace echoStudy_webAPI
                         .AllowAnyHeader()
                         .AllowCredentials());
             });
-            
+
+
             services.AddSwaggerGen(c =>
             {
+                var path = PlatformServices.Default.Application.ApplicationBasePath;
+                var file = typeof(Startup).GetTypeInfo().Assembly.GetName().Name + ".xml";
+
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "echoStudy_webAPI", Version = "v1" });
+                c.IncludeXmlComments(Path.Combine(path,file));
             });
             
         }
@@ -83,6 +91,7 @@ namespace echoStudy_webAPI
             {
                 endpoints.MapControllers();
             });
+
         }
     }
 }
