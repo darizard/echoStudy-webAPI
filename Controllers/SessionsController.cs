@@ -260,7 +260,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Sessions.Add(session);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("GetSession", new { id = session.SessionID }, session);
+                return CreatedAtAction("PutSession", new { message = "Session was successfully created.", id = session.SessionID });
             }
             // Update the deck
             else
@@ -349,13 +349,13 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update session");
                 }
 
-                return Ok(new { message = "Session was successfully updated.", session });
+                return Ok(new { message = "Session was successfully updated.", id = session.SessionID });
             }
         }
 
         // POST: api/Sessions
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
+        [HttpPost("/Sessions")]
         public async Task<ActionResult<Session>> PostSession(PostSessionInfo sessionInfo)
         {
             // Create and populate a session with the given info
@@ -435,7 +435,7 @@ namespace echoStudy_webAPI.Controllers
             _context.Sessions.Add(session);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetSession", new { id = session.SessionID }, session);
+            return CreatedAtAction("PostSession", new { id = session.SessionID });
         }
 
         // DELETE: api/Sessions/5
@@ -557,7 +557,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update session");
                 }
 
-                return Ok(new { message = "Session was successfully updated.", session });
+                return Ok(new { message = "Session was successfully updated.", id = session.SessionID });
             }
         }
 
@@ -603,7 +603,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(session).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Card was successfully added to played cards in session.", session});
+                return Ok(new { message = "Card was successfully added to played cards in session.", id = session.SessionID});
             }
         }
 
@@ -618,12 +618,12 @@ namespace echoStudy_webAPI.Controllers
             var sessionQuery = from s in _context.Sessions.Include(s => s.CardsPlayed)
                                where s.SessionID == sessionId
                                select s;
-            // Deck doesn't exist
+            // Session doesn't exist
             if (sessionQuery.Count() == 0)
             {
                 return BadRequest("Session " + sessionId + " does not exist");
             }
-            // Update the deck
+            // Update the session
             else
             {
                 Session session = sessionQuery.First();
@@ -635,7 +635,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(session).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Card was successfully added to played cards in session.", session });
+                return Ok(new { message = "Study date successfully updated.", id = session.SessionID });
             }
         }
 
