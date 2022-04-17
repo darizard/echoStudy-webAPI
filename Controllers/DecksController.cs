@@ -57,14 +57,64 @@ namespace echoStudy_webAPI.Controllers
             public List<int> cardIds { get; set; }
         }
 
-        /**
-         * Gets all decks
-         */
-        // GET: api/Decks
+        // GET: /Decks
+        /// <summary>
+        /// Retrieves all Deck objects, or optionally deck objects related
+        /// to a user by Id or by Email. If no parameter is specified, returns all deck objects.
+        /// If userId or userEmail is specified, returns the decks related to the given user. If
+        /// both parameters are specified, userId takes precedence.
+        /// </summary>
+        /// <param name="userId">The ASP.NET Id of the related user</param>
+        /// <param name="userEmail">The email address of the related user</param>
+        /// <returns>A JSON list of Deck objects</returns>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks()
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks(string userId, string userEmail)
         {
-            var query = from d in _context.Decks
+            if(userId != null)
+            { 
+                var queryid = from d in _context.Decks
+                            where d.UserId == userId
+                            select new DeckInfo
+                            {
+                                id = d.DeckID,
+                                title = d.Title,
+                                description = d.Description,
+                                access = d.Access.ToString(),
+                                default_flang = d.DefaultFrontLang.ToString(),
+                                default_blang = d.DefaultBackLang.ToString(),
+                                cards = d.Cards.Select(c => c.CardID).ToList(),
+                                ownerId = d.UserId,
+                                date_created = d.DateCreated,
+                                date_touched = d.DateTouched,
+                                date_updated = d.DateUpdated
+                            };
+                return await queryid.ToListAsync();
+            }
+
+            if(userEmail != null)
+            {
+                EchoUser user = await _userManager.FindByEmailAsync(userEmail);
+
+                var queryid = from d in _context.Decks
+                              where d.UserId == user.Id
+                              select new DeckInfo
+                              {
+                                  id = d.DeckID,
+                                  title = d.Title,
+                                  description = d.Description,
+                                  access = d.Access.ToString(),
+                                  default_flang = d.DefaultFrontLang.ToString(),
+                                  default_blang = d.DefaultBackLang.ToString(),
+                                  cards = d.Cards.Select(c => c.CardID).ToList(),
+                                  ownerId = d.UserId,
+                                  date_created = d.DateCreated,
+                                  date_touched = d.DateTouched,
+                                  date_updated = d.DateUpdated
+                              };
+                return await queryid.ToListAsync();
+            }
+
+            var queryall = from d in _context.Decks
                         select new DeckInfo
                         {
                             id = d.DeckID,
@@ -78,16 +128,16 @@ namespace echoStudy_webAPI.Controllers
                             date_created = d.DateCreated,
                             date_touched = d.DateTouched,
                             date_updated = d.DateUpdated
-                        } ;
-            return await query.ToListAsync();
+                        };
+            return await queryall.ToListAsync();
         }
 
-        /**
-         * Gets all public decks
-         */
-        // GET: api/PublicDecks
-        [HttpGet]
-        [Route("Public")]
+        // GET: /Decks/Public
+        /// <summary>
+        /// Retrieves all Deck objects which have an access level of Public
+        /// </summary>
+        /// <returns>A JSON list of Deck objects</returns>
+        [HttpGet("Public")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDecks()
         {
             var query = from d in _context.Decks
@@ -112,7 +162,7 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Gets a deck given by id
          */
-        // GET: api/Decks/5
+        // GET: /Decks/5
         [HttpGet("{id}")]
         public async Task<ActionResult<DeckInfo>> GetDeck(int id)
         {
@@ -133,25 +183,25 @@ namespace echoStudy_webAPI.Controllers
                             date_updated = d.DateUpdated
                         };
 
-            if (query.Count() == 0)
+            if (!query.Any())
             {
                 return NotFound();
             }
 
-            return query.First();
+            return await query.FirstAsync();
         }
 
         /**
- * Gets all cards belonging to the given user provided by email
- */
-        // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/Decks/UserEmail={userEmail}")]
+        * Gets all decks belonging to the given user provided by email
+         */
+        // GET: /Decks/ByEmail?userEmail=johndoe@gmail.com
+        [HttpGet("ByEmail")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetUserDecksByEmail(string userEmail)
         {
             EchoUser user = await _userManager.FindByEmailAsync(userEmail);
             if (user is null)
             {
-                return BadRequest("User " + userEmail + " not found");
+                return NotFound("User " + userEmail + " not found");
             }
             else
             {
@@ -179,8 +229,8 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Gets all cards belonging to the given user
          */
-        // GET: api/Cards/User=johndoe@gmail.com
-        [HttpGet("/Decks/User={userId}")]
+        // GET: /Decks/ByUserId?userId=userId
+        [HttpGet("/Decks/ByUserId={userId}")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetUserDecks(string userId)
         {
             var query = from d in _context.Decks
@@ -459,6 +509,7 @@ namespace echoStudy_webAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Deck>> PostDeck(PostDeckInfo deckInfo)
         {
+            
             // Create and populate a deck with the given info
             Deck deck = new Deck();
             deck.Title = deckInfo.title;
