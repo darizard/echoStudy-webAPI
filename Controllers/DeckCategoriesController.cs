@@ -243,7 +243,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.DeckCategories.Add(deckCategory);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("PutDeckCategory", new { message = "Deck category was successfully created.", id = deckCategory.CategoryID });
+                return CreatedAtAction("PutDeckCategory", new { id = deckCategory.CategoryID });
             }
             // Create the deck category
             else
@@ -317,7 +317,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update deck category");
                 }
 
-                return Ok(new { message = "Deck category was successfully updated.", id = deckCategory.CategoryID });
+                return Ok(new { id = deckCategory.CategoryID });
             }
         }
 
@@ -479,7 +479,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update deck category");
                 }
 
-                return Ok(new { message = "Deck category was successfully updated.", id = deckCategory.CategoryID });
+                return Ok(new { id = deckCategory.CategoryID });
             }
         }
 
@@ -512,7 +512,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(deckCategory).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Deck category was successfully touched.", id = deckCategory.CategoryID});
+                return Ok(new { id = deckCategory.CategoryID});
             }
         }
 

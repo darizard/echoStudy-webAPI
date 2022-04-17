@@ -260,7 +260,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Sessions.Add(session);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("PutSession", new { message = "Session was successfully created.", id = session.SessionID });
+                return CreatedAtAction("PutSession", new { id = session.SessionID });
             }
             // Update the deck
             else
@@ -349,7 +349,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update session");
                 }
 
-                return Ok(new { message = "Session was successfully updated.", id = session.SessionID });
+                return Ok(new { id = session.SessionID });
             }
         }
 
@@ -557,7 +557,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update session");
                 }
 
-                return Ok(new { message = "Session was successfully updated.", id = session.SessionID });
+                return Ok(new { id = session.SessionID });
             }
         }
 
@@ -603,7 +603,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(session).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Card was successfully added to played cards in session.", id = session.SessionID});
+                return Ok(new { id = session.SessionID });
             }
         }
 
@@ -635,7 +635,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(session).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Study date successfully updated.", id = session.SessionID });
+                return Ok(new { id = session.SessionID });
             }
         }
 
