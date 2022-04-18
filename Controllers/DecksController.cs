@@ -166,6 +166,13 @@ namespace echoStudy_webAPI.Controllers
         }
 
         // GET: /Decks/{id}
+        /// <summary>
+        /// Retrieves one Deck specified by Id
+        /// </summary>
+        /// <remarks>
+        /// <param name="id">Deck ID</param>
+        /// </remarks>
+        /// <returns>A JSON Deck object</returns>
         [HttpGet("{id}")]
         public async Task<ActionResult<DeckInfo>> GetDeck(int id)
         {
@@ -188,7 +195,7 @@ namespace echoStudy_webAPI.Controllers
 
             if (!query.Any())
             {
-                return NotFound();
+                return NotFound("DeckId " + id + " was not found");
             }
 
             return await query.FirstAsync();
@@ -246,7 +253,7 @@ namespace echoStudy_webAPI.Controllers
         /// <param name="deckInfo">
         /// Optional: title, description, default_flang, default_blang, userId, access, cardIds
         /// </param>
-        /// <returns>A JSON list of Deck objects</returns>
+        /// <returns>An Ok response if successful</returns>
         [HttpPost("{id}")]
         public async Task<IActionResult> PostDeckEdit(int id, PostDeckInfo deckInfo)
         {
@@ -629,15 +636,20 @@ namespace echoStudy_webAPI.Controllers
         }
         */
 
-        
-        // DELETE: api/Decks/5
-        [HttpDelete("{id}")]
+
+        // DELETE: /Decks/Delete/{id}
+        /// <summary>
+        /// Deletes one specific deck
+        /// </summary>
+        /// <param name="id">The deck's ID</param>
+        /// <returns>204 No Content response if successful</returns>
+        [HttpPost("Delete/{id}")]
         public async Task<IActionResult> DeleteDeck(int id)
         {
             var deck = await _context.Decks.FindAsync(id);
             if (deck == null)
             {
-                return NotFound();
+                return NotFound("DeckId " + id + " was not found");
             }
 
             _context.Decks.Remove(deck);
@@ -645,13 +657,14 @@ namespace echoStudy_webAPI.Controllers
 
             return NoContent();
         }
-        
 
-        /**
-        * Deletes all decks associated with one user
-        */
-        // DELETE: api/Decks/5
-        [HttpDelete("/Decks/DeleteUserDecks={userId}")]
+        // POST: /Decks/Delete?userId={userID}
+        /// <summary>
+        /// Delete all of one user's decks
+        /// </summary>
+        /// <param name="userId">The user's ID</param>
+        /// <returns>204 No Content response if successful</returns>
+        [HttpPost("Delete")]
         public async Task<IActionResult> DeleteUserDecks(string userId)
         {
             var query = from d in _context.Decks
@@ -668,38 +681,6 @@ namespace echoStudy_webAPI.Controllers
 
             return NoContent();
         }
-
-        /**
-         * Deletes all decks associated with one user
-         */
-        /*
-        // DELETE: api/Decks/DeleteUserDecksByEmail=johnDoe@gmail.com
-        [HttpDelete("/Decks/DeleteUserDecksByEmail={userEmail}")]
-        public async Task<IActionResult> DeleteUserDecksByEmail(string userEmail)
-        {
-            EchoUser user = await _userManager.FindByEmailAsync(userEmail);
-            if (user is null)
-            {
-                return BadRequest("User " + userEmail + " not found");
-            }
-            else
-            {
-                var query = from d in _context.Decks
-                            where d.UserId == user.Id
-                            select d;
-
-                List<Deck> userDecks = await query.ToListAsync();
-                foreach (Deck deck in userDecks)
-                {
-                    _context.Decks.Remove(deck);
-                }
-
-                await _context.SaveChangesAsync();
-
-                return NoContent();
-            }
-        }
-        */
 
         private bool DeckExists(int id)
         {
