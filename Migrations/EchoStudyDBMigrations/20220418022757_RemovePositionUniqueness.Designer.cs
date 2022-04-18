@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using echoStudy_webAPI.Models;
 
 namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
 {
     [DbContext(typeof(EchoStudyDB))]
-    partial class EchoStudyDBModelSnapshot : ModelSnapshot
+    [Migration("20220418022757_RemovePositionUniqueness")]
+    partial class RemovePositionUniqueness
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
