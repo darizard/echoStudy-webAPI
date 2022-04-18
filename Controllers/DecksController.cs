@@ -9,6 +9,7 @@ using echoStudy_webAPI.Models;
 using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
+using Newtonsoft.Json;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -54,17 +55,19 @@ namespace echoStudy_webAPI.Controllers
             public string default_flang { get; set; }
             public string default_blang { get; set; }
             public string userEmail { get; set; }
+            public string userId { get; set; }
             public List<int> cardIds { get; set; }
         }
 
         // GET: /Decks
         /// <summary>
-        /// Retrieves all Deck objects, or optionally deck objects related
-        /// to a user by Id or by Email. If no parameter is specified, returns all deck objects.
+        /// Retrieves all Deck objects or deck objects related to a user by Id or by Email
+        /// </summary>
+        /// <remarks>If no parameter is specified, returns all deck objects.
         /// If userId or userEmail is specified, returns the decks related to the given user. If
         /// both parameters are specified, userId takes precedence.
-        /// </summary>
-        /// <param name="userId">The ASP.NET Id of the related user</param>
+        /// </remarks>
+        /// <param name="userId">The ASP.NET Id of the related user. Overrides <c>userEmail</c> if present</param>
         /// <param name="userEmail">The email address of the related user</param>
         /// <returns>A JSON list of Deck objects</returns>
         [HttpGet]
@@ -134,8 +137,11 @@ namespace echoStudy_webAPI.Controllers
 
         // GET: /Decks/Public
         /// <summary>
-        /// Retrieves all Deck objects which have an access level of Public
+        /// Retrieves Public Decks
         /// </summary>
+        /// <remarks>
+        /// All Decks with an access level of Public
+        /// </remarks>
         /// <returns>A JSON list of Deck objects</returns>
         [HttpGet("Public")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDecks()
@@ -159,10 +165,7 @@ namespace echoStudy_webAPI.Controllers
             return await query.ToListAsync();
         }
 
-        /**
-         * Gets a deck given by id
-         */
-        // GET: /Decks/5
+        // GET: /Decks/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<DeckInfo>> GetDeck(int id)
         {
@@ -191,70 +194,11 @@ namespace echoStudy_webAPI.Controllers
             return await query.FirstAsync();
         }
 
-        /**
-        * Gets all decks belonging to the given user provided by email
-         */
-        // GET: /Decks/ByEmail?userEmail=johndoe@gmail.com
-        [HttpGet("ByEmail")]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetUserDecksByEmail(string userEmail)
-        {
-            EchoUser user = await _userManager.FindByEmailAsync(userEmail);
-            if (user is null)
-            {
-                return NotFound("User " + userEmail + " not found");
-            }
-            else
-            {
-                var query = from d in _context.Decks
-                            where d.UserId == user.Id
-                            select new DeckInfo
-                            {
-                                id = d.DeckID,
-                                title = d.Title,
-                                description = d.Description,
-                                access = d.Access.ToString(),
-                                default_flang = d.DefaultFrontLang.ToString(),
-                                default_blang = d.DefaultBackLang.ToString(),
-                                cards = d.Cards.Select(c => c.CardID).ToList(),
-                                ownerId = d.UserId,
-                                date_created = d.DateCreated,
-                                date_touched = d.DateTouched,
-                                date_updated = d.DateUpdated
-                            };
-                return await query.ToListAsync();
-            }
-        }
-
-
-        /**
-         * Gets all cards belonging to the given user
-         */
-        // GET: /Decks/ByUserId?userId=userId
-        [HttpGet("/Decks/ByUserId={userId}")]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetUserDecks(string userId)
-        {
-            var query = from d in _context.Decks
-                        where d.UserId == userId
-                        select new DeckInfo
-                        {
-                            id = d.DeckID,
-                            title = d.Title,
-                            description = d.Description,
-                            access = d.Access.ToString(),
-                            default_flang = d.DefaultFrontLang.ToString(),
-                            default_blang = d.DefaultBackLang.ToString(),
-                            cards = d.Cards.Select(c => c.CardID).ToList(),
-                            ownerId = d.UserId,
-                            date_created = d.DateCreated,
-                            date_touched = d.DateTouched,
-                            date_updated = d.DateUpdated
-                        };
-            return await query.ToListAsync();
-        }
-
+        //-------------------Keep commented method for when we are using JWTs? Can query by category here
         /**
         * Gets the deck category that owns a given deck id belonging to a given deck category
         */
+        /*
         // GET: api/Decks/DeckCategory=2
         [HttpGet("/Decks/DeckCategory={categoryId}")]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDeckCategoryDecks(int categoryId)
@@ -289,11 +233,18 @@ namespace echoStudy_webAPI.Controllers
                 return await query.ToListAsync();
             }
         }
+        */
 
-        // PUT: api/Decks/5
+        // POST: api/Decks/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutDeck(int id, PostDeckInfo deckInfo)
+        /// <summary>
+        /// Edits a Deck ... (UNIMPLEMENTED)
+        /// </summary>
+        /// <param name="userId">The ASP.NET Id of the related user. Overrides <c>userEmail</c> if present</param>
+        /// <param name="userEmail">The email address of the related user</param>
+        /// <returns>A JSON list of Deck objects</returns>
+        [HttpPost("{id}")]
+        public async Task<IActionResult> PostDeckEdit(int id, PostDeckInfo deckInfo)
         {
             var deckQuery = from d in _context.Decks
                             where d.DeckID == id
@@ -506,12 +457,64 @@ namespace echoStudy_webAPI.Controllers
 
         // POST: api/Decks
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Creates a Deck for a specific user
+        /// </summary>
+        /// <param name="deckInfo">
+        /// Required: title, description, default_flang, default_blang, userEmail -- Optional: access, cardIds
+        /// </param>
+        /// <remarks>Default access level is Private. The cardIds list currently does nothing.</remarks>
+        /// <returns>A JSON list of Deck objects</returns>
         [HttpPost]
-        public async Task<ActionResult<Deck>> PostDeck(PostDeckInfo deckInfo)
+        public async Task<ActionResult<Deck>> PostDeckCreate(PostDeckInfo deckInfo)
         {
-            
             // Create and populate a deck with the given info
-            Deck deck = new Deck();
+            Deck deck = new();
+            
+            if (String.IsNullOrEmpty(deckInfo.title))
+            {
+                return BadRequest("a non-empty title is required");
+            }
+            if(String.IsNullOrEmpty(deckInfo.description))
+            {
+                return BadRequest("a non-empty description is required");
+            }
+            if(String.IsNullOrEmpty(deckInfo.default_flang))
+            {
+                return BadRequest("a non-empty default_flang is required");
+            }
+            if(String.IsNullOrEmpty(deckInfo.default_blang))
+            {
+                return BadRequest("a non-empty default_blang is required");
+            }
+            if(String.IsNullOrEmpty(deckInfo.userId))
+            {
+                return BadRequest("a non-empty userId is required");
+            }
+
+            // Ensure Owner exists and add it
+            EchoUser user = await _userManager.FindByIdAsync(deckInfo.userId);
+            if (user is null) { return BadRequest("User " + deckInfo.userId + " not found"); }
+            deck.UserId = user.Id;
+
+            IQueryable<dynamic> querycards;
+            // Ensure all cards in deckInfo.cardIds exist and load them
+            if(deckInfo.cardIds is not null)
+            {
+                querycards = from c in _context.Cards
+                                 where deckInfo.cardIds.Contains(c.CardID)
+                                 select c;
+
+                if (querycards.Count() < deckInfo.cardIds.Count)
+                {
+                    List<int> cardIds = new();
+                    foreach (Card card in querycards) { cardIds.Add(card.CardID); }
+                    var querydiff = deckInfo.cardIds.Except(cardIds);
+                    return NotFound("cardIds not found: " + JsonConvert.SerializeObject(querydiff));
+                }
+            }
+
+            //----------------Set the rest of the deck info
             deck.Title = deckInfo.title;
             deck.Description = deckInfo.description;
             // Handle the enums with switch cases
@@ -520,11 +523,9 @@ namespace echoStudy_webAPI.Controllers
                 case "public":
                     deck.Access = Access.Public;
                     break;
-                case "private":
+                default:
                     deck.Access = Access.Private;
                     break;
-                default:
-                    return BadRequest("Valid access parameters are Public and Private");
             }
             switch (deckInfo.default_flang.ToLower())
             {
@@ -560,40 +561,40 @@ namespace echoStudy_webAPI.Controllers
                 default:
                     return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
             }
-            // Associate the deck with the appropriate cards
-            deck.Cards = new List<Card>();
+
+            // Dates
+            deck.DateCreated = DateTime.Now;
+            deck.DateTouched = DateTime.Now;
+            deck.DateUpdated = DateTime.Now;
+
+            await _context.Decks.AddAsync(deck);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("PostDeckCreate", new { id = deck.DeckID }, deck);
+
+            // Associate the listed cards to the new deck
+            foreach (Card card in querycards) { card.DeckID = deck.DeckID; }
+            await _context.SaveChangesAsync();
+
             foreach (int cardId in deckInfo.cardIds)
             {
                 // Grab the deck. Only possible for one or zero results since ids are unique.
-                var query = from c in _context.Cards
+                var queryold = from c in _context.Cards
                             where c.CardID == cardId
                             select c;
-                if (query.Count() == 0)
+                if (!queryold.Any())
                 {
-                    return BadRequest("Deck id " + cardId + " does not exist");
+                    return BadRequest("Card id " + cardId + " does not exist");
                 }
                 else
                 {
-                    Card card = query.First();
+                    Card card = queryold.First();
                     card.CardID = deck.DeckID;
                     deck.Cards.Add(card);
                     _context.Entry(card).State = EntityState.Modified;
                 }
             }
-            // Owner
-            EchoUser user = await _userManager.FindByEmailAsync(deckInfo.userEmail);
-            if (user is null)
-            {
-                return BadRequest("User " + deckInfo.userEmail + " not found");
-            }
-            else
-            {
-                deck.UserId = user.Id;
-            }
-            // Dates
-            deck.DateCreated = DateTime.Now;
-            deck.DateTouched = DateTime.Now;
-            deck.DateUpdated = DateTime.Now;
+
 
             // Save the deck
             _context.Decks.Add(deck);
@@ -605,6 +606,7 @@ namespace echoStudy_webAPI.Controllers
         /*
  * Updates the given deck by id 
  */
+        /*
         // PATCH: api/Decks/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("{id}")]
@@ -729,10 +731,12 @@ namespace echoStudy_webAPI.Controllers
                 return Ok(new { message = "Deck was successfully updated.", deck });
             }
         }
+        */
 
         /*
         * Updates the given deck by id 
         */
+        /*
         // PATCH: api/Decks/Touch=1
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("Touch={id}")]
@@ -761,7 +765,9 @@ namespace echoStudy_webAPI.Controllers
                 return Ok(new { message = "Deck was successfully touched.", deck });
             }
         }
+        */
 
+        
         // DELETE: api/Decks/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDeck(int id)
@@ -777,11 +783,12 @@ namespace echoStudy_webAPI.Controllers
 
             return NoContent();
         }
+        
 
         /**
         * Deletes all decks associated with one user
         */
-        // DELETE: api/Cards/5
+        // DELETE: api/Decks/5
         [HttpDelete("/Decks/DeleteUserDecks={userId}")]
         public async Task<IActionResult> DeleteUserDecks(string userId)
         {
@@ -803,6 +810,7 @@ namespace echoStudy_webAPI.Controllers
         /**
          * Deletes all decks associated with one user
          */
+        /*
         // DELETE: api/Decks/DeleteUserDecksByEmail=johnDoe@gmail.com
         [HttpDelete("/Decks/DeleteUserDecksByEmail={userEmail}")]
         public async Task<IActionResult> DeleteUserDecksByEmail(string userEmail)
@@ -829,6 +837,7 @@ namespace echoStudy_webAPI.Controllers
                 return NoContent();
             }
         }
+        */
 
         private bool DeckExists(int id)
         {
