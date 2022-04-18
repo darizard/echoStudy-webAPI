@@ -195,7 +195,7 @@ namespace echoStudy_webAPI.Controllers
 
             if (!query.Any())
             {
-                return NotFound();
+                return NotFound("DeckId " + id + " was not found");
             }
 
             return await query.FirstAsync();
@@ -253,7 +253,7 @@ namespace echoStudy_webAPI.Controllers
         /// <param name="deckInfo">
         /// Optional: title, description, default_flang, default_blang, userId, access, cardIds
         /// </param>
-        /// <returns>A JSON list of Deck objects</returns>
+        /// <returns>An Ok response if successful</returns>
         [HttpPost("{id}")]
         public async Task<IActionResult> PostDeckEdit(int id, PostDeckInfo deckInfo)
         {
@@ -637,7 +637,7 @@ namespace echoStudy_webAPI.Controllers
         */
 
 
-        // DELETE: /Decks/Delete/5
+        // DELETE: /Decks/Delete/{id}
         /// <summary>
         /// Deletes one specific deck
         /// </summary>
@@ -649,7 +649,7 @@ namespace echoStudy_webAPI.Controllers
             var deck = await _context.Decks.FindAsync(id);
             if (deck == null)
             {
-                return NotFound();
+                return NotFound("DeckId " + id + " was not found");
             }
 
             _context.Decks.Remove(deck);
@@ -657,7 +657,6 @@ namespace echoStudy_webAPI.Controllers
 
             return NoContent();
         }
-
 
         // POST: /Decks/Delete?userId={userID}
         /// <summary>
