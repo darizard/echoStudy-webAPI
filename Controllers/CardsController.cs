@@ -470,7 +470,11 @@ namespace echoStudy_webAPI.Controllers
                 _context.Cards.Add(card);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("PutCard", new { id = card.CardID });
+                return CreatedAtAction("PutCard", new
+                {
+                    id = card.CardID,
+                    dateCreated = card.DateCreated
+                });
             }
             // Update the card
             else
@@ -659,7 +663,11 @@ namespace echoStudy_webAPI.Controllers
             _context.Cards.Add(card);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("PostCard", new { id = card.CardID });
+            return CreatedAtAction("PostCard", new
+            {
+                id = card.CardID,
+                dateCreated = card.DateCreated
+            });
         }
 
         /** 

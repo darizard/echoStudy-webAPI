@@ -243,7 +243,11 @@ namespace echoStudy_webAPI.Controllers
                 _context.DeckCategories.Add(deckCategory);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("PutDeckCategory", new { id = deckCategory.CategoryID });
+                return CreatedAtAction("PutDeckCategory", new
+                {
+                    id = deckCategory.CategoryID,
+                    dateCreated = deckCategory.DateCreated
+                });
             }
             // Create the deck category
             else
@@ -372,7 +376,11 @@ namespace echoStudy_webAPI.Controllers
             _context.DeckCategories.Add(deckCategory);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("PostDeckCategory", new { id = deckCategory.CategoryID });
+            return CreatedAtAction("PostDeckCategory", new
+            {
+                id = deckCategory.CategoryID,
+                dateCreated = deckCategory.DateCreated
+            });
         }
 
         // DELETE: api/DeckCategories/5

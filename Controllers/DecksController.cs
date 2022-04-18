@@ -460,7 +460,8 @@ namespace echoStudy_webAPI.Controllers
 
             return CreatedAtAction("PostDeckCreate", new
             {
-                id = deck.DeckID
+                id = deck.DeckID,
+                dateCreated = deck.DateCreated
             });
         }
 

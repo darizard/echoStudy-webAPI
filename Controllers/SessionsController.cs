@@ -260,7 +260,11 @@ namespace echoStudy_webAPI.Controllers
                 _context.Sessions.Add(session);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("PutSession", new { id = session.SessionID });
+                return CreatedAtAction("PutSession", new
+                {
+                    id = session.DeckID,
+                    dateCreated = session.DateCreated
+                });
             }
             // Update the deck
             else
@@ -435,7 +439,11 @@ namespace echoStudy_webAPI.Controllers
             _context.Sessions.Add(session);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("PostSession", new { id = session.SessionID });
+            return CreatedAtAction("PostSession", new
+            {
+                id = session.DeckID,
+                dateCreated = session.DateCreated
+            });
         }
 
         // DELETE: api/Sessions/5
