@@ -317,7 +317,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update deck category");
                 }
 
-                return Ok(new { id = deckCategory.CategoryID });
+                return Ok();
             }
         }
 
@@ -479,7 +479,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update deck category");
                 }
 
-                return Ok(new { id = deckCategory.CategoryID });
+                return Ok();
             }
         }
 
@@ -512,7 +512,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(deckCategory).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { id = deckCategory.CategoryID});
+                return Ok();
             }
         }
 

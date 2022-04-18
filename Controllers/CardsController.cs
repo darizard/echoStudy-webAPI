@@ -38,7 +38,7 @@ namespace echoStudy_webAPI.Controllers
             public string baud { get; set; }
             public string flang { get; set; }
             public string blang { get; set; }
-            public Deck deck { get; set; }
+            public int deckId { get; set; }
             public int score { get; set; }
             public string ownerId { get; set; }
             public DateTime date_created { get; set; }
@@ -56,7 +56,7 @@ namespace echoStudy_webAPI.Controllers
             public string frontLang { get; set; }
             public string backLang { get; set; }
             public string userEmail { get; set; }
-            public Deck deck { get; set; }
+            public int deckId { get; set; }
         }
 
         /**
@@ -76,7 +76,7 @@ namespace echoStudy_webAPI.Controllers
                             baud = c.BackAudio,
                             flang = c.FrontLang.ToString(),
                             blang = c.BackLang.ToString(),
-                            deck = c.Deck,
+                            deckId = c.Deck.DeckID,
                             score = c.Score,
                             ownerId = c.UserId,
                             date_created = c.DateCreated,
@@ -111,7 +111,7 @@ namespace echoStudy_webAPI.Controllers
                                 baud = c.BackAudio,
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
-                                deck = c.Deck,
+                                deckId = c.Deck.DeckID,
                                 score = c.Score,
                                 ownerId = c.UserId,
                                 date_created = c.DateCreated,
@@ -141,7 +141,7 @@ namespace echoStudy_webAPI.Controllers
                                 baud = c.BackAudio,
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
-                                deck = c.Deck,
+                                deckId = c.Deck.DeckID,
                                 score = c.Score,
                                 ownerId = c.UserId,
                                 date_created = c.DateCreated,
@@ -180,7 +180,7 @@ namespace echoStudy_webAPI.Controllers
                                 baud = c.BackAudio,
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
-                                deck = c.Deck,
+                                deckId = c.Deck.DeckID,
                                 score = c.Score,
                                 ownerId = c.UserId,
                                 date_created = c.DateCreated,
@@ -209,7 +209,7 @@ namespace echoStudy_webAPI.Controllers
                             baud = c.BackAudio,
                             flang = c.FrontLang.ToString(),
                             blang = c.BackLang.ToString(),
-                            deck = c.Deck,
+                            deckId = c.Deck.DeckID,
                             score = c.Score,
                             ownerId = c.UserId,
                             date_created = c.DateCreated,
@@ -256,7 +256,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(card).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Card was successfully touched.", card });
+                return Ok();
             }
         }
 
@@ -281,18 +281,50 @@ namespace echoStudy_webAPI.Controllers
             {
                 Card card = cardQuery.First();
 
-                // Set the texts then set the audio
-                if(card.FrontText != cardInfo.frontText)
+                // Set the texts, language, then audio
+                if(card.FrontText != cardInfo.frontText || card.FrontLang.ToString() != cardInfo.frontLang)
                 {
                     card.FrontText = cardInfo.frontText;
-                    // TODO: Implement audio
-                    card.FrontAudio = "todo";
+                    switch (cardInfo.frontLang.ToLower())
+                    {
+                        case "english":
+                            card.FrontLang = Language.English;
+                            break;
+                        case "spanish":
+                            card.FrontLang = Language.Spanish;
+                            break;
+                        case "japanese":
+                            card.FrontLang = Language.Japanese;
+                            break;
+                        case "german":
+                            card.FrontLang = Language.German;
+                            break;
+                        default:
+                            return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                    }
+                    card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
                 }
-                if (card.BackText != cardInfo.backText)
+                if (card.BackText != cardInfo.backText || card.BackLang.ToString() != cardInfo.backLang)
                 {
                     card.BackText = cardInfo.backText;
-                    // TODO: Implement audio
-                    card.BackAudio = "todo";
+                    switch (cardInfo.backLang.ToLower())
+                    {
+                        case "english":
+                            card.BackLang = Language.English;
+                            break;
+                        case "spanish":
+                            card.BackLang = Language.Spanish;
+                            break;
+                        case "japanese":
+                            card.BackLang = Language.Japanese;
+                            break;
+                        case "german":
+                            card.BackLang = Language.German;
+                            break;
+                        default:
+                            return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                    }
+                    card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 }
 
                 // Assign the owner
@@ -309,11 +341,11 @@ namespace echoStudy_webAPI.Controllers
                 Deck updatedDeck = new Deck();
                     // Grab the deck. Only possible for one or zero results since ids are unique.
                 var query = from d in _context.Decks.Include(d => d.Cards)
-                            where d.DeckID == cardInfo.deck.DeckID
+                            where d.DeckID == cardInfo.deckId
                             select d;
                 if (!query.Any())
                 {
-                    return BadRequest("Deck id " + cardInfo.deck + " does not exist");
+                    return BadRequest("Deck id " + cardInfo.deckId + " does not exist");
                 }
 
                 updatedDeck = query.First();
@@ -340,7 +372,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update card");
                 }
 
-                return Ok(new { message = "Card was successfully updated.", card });
+                return Ok();
             }
         }
 
@@ -363,9 +395,6 @@ namespace echoStudy_webAPI.Controllers
                 Card card = new Card();
                 card.FrontText = cardInfo.frontText;
                 card.BackText = cardInfo.backText;
-                // TODO: Implement audio 
-                card.FrontAudio = "todo";
-                card.BackAudio = "todo";
                 // frontLang and backLang are stored as enums so convert their string to the appropriate enum value.
                 switch (cardInfo.frontLang.ToLower())
                 {
@@ -401,6 +430,9 @@ namespace echoStudy_webAPI.Controllers
                     default:
                         return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
                 }
+                // Audio 
+                card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
+                card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 // Have to retrieve the owner user by email
                 EchoUser user = await _userManager.FindByEmailAsync(cardInfo.userEmail);
                 if (user is null)
@@ -413,7 +445,22 @@ namespace echoStudy_webAPI.Controllers
                 }
 
                 // Assign it to the deck given by id
-                card.Deck = cardInfo.deck;
+                var deckQuery = from d in _context.Decks
+                                where d.DeckID == cardInfo.deckId
+                                select d;
+                if(deckQuery.Count() == 0)
+                {
+                    return BadRequest("Deck ID " + cardInfo.deckId + " not found");
+                }
+                Deck deck = deckQuery.First();
+                card.Deck = deck;
+
+                // Relate the deck and card
+                if (!deck.Cards.Contains(card))
+                {
+                    deck.Cards.Add(card);
+                }
+                _context.Entry(deck).State = EntityState.Modified;
 
                 // Assign it dates and a score of 0
                 card.DateCreated = DateTime.Now;
@@ -423,25 +470,57 @@ namespace echoStudy_webAPI.Controllers
                 _context.Cards.Add(card);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("GetCard", new { id = card.CardID }, card);
+                return CreatedAtAction("PutCard", new { id = card.CardID });
             }
             // Update the card
             else
             {
                 Card card = cardQuery.First();
 
-                // Set the texts then set the audio
-                if (card.FrontText != cardInfo.frontText)
+                // Set the texts, language, then audio
+                if (card.FrontText != cardInfo.frontText || card.FrontLang.ToString() != cardInfo.frontLang)
                 {
                     card.FrontText = cardInfo.frontText;
-                    // TODO: Implement audio
-                    card.FrontAudio = "todo";
+                    switch (cardInfo.frontLang.ToLower())
+                    {
+                        case "english":
+                            card.FrontLang = Language.English;
+                            break;
+                        case "spanish":
+                            card.FrontLang = Language.Spanish;
+                            break;
+                        case "japanese":
+                            card.FrontLang = Language.Japanese;
+                            break;
+                        case "german":
+                            card.FrontLang = Language.German;
+                            break;
+                        default:
+                            return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                    }
+                    card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
                 }
-                if (card.BackText != cardInfo.backText)
+                if (card.BackText != cardInfo.backText || card.BackLang.ToString() != cardInfo.backLang)
                 {
                     card.BackText = cardInfo.backText;
-                    // TODO: Implement audio
-                    card.BackAudio = "todo";
+                    switch (cardInfo.backLang.ToLower())
+                    {
+                        case "english":
+                            card.BackLang = Language.English;
+                            break;
+                        case "spanish":
+                            card.BackLang = Language.Spanish;
+                            break;
+                        case "japanese":
+                            card.BackLang = Language.Japanese;
+                            break;
+                        case "german":
+                            card.BackLang = Language.German;
+                            break;
+                        default:
+                            return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                    }
+                    card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 }
 
                 // Assign the owner
@@ -455,8 +534,24 @@ namespace echoStudy_webAPI.Controllers
                     card.UserId = user.Id;
                 }
 
-                // Assign it to the decks given by id (if there is any)
-                card.Deck = cardInfo.deck;
+                Deck updatedDeck = new Deck();
+                // Grab the deck. Only possible for one or zero results since ids are unique.
+                var query = from d in _context.Decks.Include(d => d.Cards)
+                            where d.DeckID == cardInfo.deckId
+                            select d;
+                if (!query.Any())
+                {
+                    return BadRequest("Deck id " + cardInfo.deckId + " does not exist");
+                }
+
+                updatedDeck = query.First();
+                // If they aren't already related, relate them
+                if (card.Deck.DeckID != updatedDeck.DeckID)
+                {
+                    card.Deck = updatedDeck;
+                    updatedDeck.Cards.Add(card);
+                }
+                _context.Entry(updatedDeck).State = EntityState.Modified;
 
                 // Change update date
                 card.DateUpdated = DateTime.Now;
@@ -473,7 +568,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update card");
                 }
 
-                return Ok(new { message = "Card was successfully updated.", card });
+                return Ok();
             }
         }
 
@@ -537,9 +632,25 @@ namespace echoStudy_webAPI.Controllers
             {
                 card.UserId = user.Id;
             }
-            // Assign it to the decks given by id (if there is any)
-            card.Deck = cardInfo.deck;
-            
+
+            // Assign it to the deck given by id
+            var deckQuery = from d in _context.Decks
+                            where d.DeckID == cardInfo.deckId
+                            select d;
+            if (deckQuery.Count() == 0)
+            {
+                return BadRequest("Deck ID " + cardInfo.deckId + " not found");
+            }
+            Deck deck = deckQuery.First();
+            card.Deck = deck;
+
+            // Relate the deck and card
+            if (!deck.Cards.Contains(card))
+            {
+                deck.Cards.Add(card);
+            }
+            _context.Entry(deck).State = EntityState.Modified;
+
             // Assign it dates and a score of 0
             card.DateCreated = DateTime.Now;
             card.DateTouched = DateTime.Now;
@@ -548,7 +659,7 @@ namespace echoStudy_webAPI.Controllers
             _context.Cards.Add(card);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetCard", new { id = card.CardID }, card);
+            return CreatedAtAction("PostCard", new { id = card.CardID });
         }
 
         /** 

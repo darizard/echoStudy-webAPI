@@ -349,7 +349,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update session");
                 }
 
-                return Ok(new { id = session.SessionID });
+                return Ok();
             }
         }
 
@@ -557,7 +557,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update session");
                 }
 
-                return Ok(new { id = session.SessionID });
+                return Ok();
             }
         }
 
@@ -603,7 +603,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(session).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { id = session.SessionID });
+                return Ok();
             }
         }
 
@@ -635,7 +635,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(session).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { id = session.SessionID });
+                return Ok();
             }
         }
 

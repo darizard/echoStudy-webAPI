@@ -460,8 +460,7 @@ namespace echoStudy_webAPI.Controllers
 
             return CreatedAtAction("PostDeckCreate", new
             {
-                id = deck.DeckID,
-                dateCreated = deck.DateCreated
+                id = deck.DeckID
             });
         }
 
@@ -590,7 +589,7 @@ namespace echoStudy_webAPI.Controllers
                     return BadRequest("Failed to update deck");
                 }
 
-                return Ok(new { message = "Deck was successfully updated.", deck });
+                return Ok(new { deck.DeckID });
             }
         }
         */
@@ -624,7 +623,7 @@ namespace echoStudy_webAPI.Controllers
                 _context.Entry(deck).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Deck was successfully touched.", deck });
+                return Ok(new { id = Deck.DeckID });
             }
         }
         */
