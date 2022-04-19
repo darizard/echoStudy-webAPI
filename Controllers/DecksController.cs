@@ -236,47 +236,6 @@ namespace echoStudy_webAPI.Controllers
             return Ok(await query.FirstAsync());
         }
 
-        //-------------------Keep commented method for when we are using JWTs? Can query by category here
-        /**
-        * Gets the deck category that owns a given deck id belonging to a given deck category
-        */
-        /*
-        // GET: api/Decks/DeckCategory=2
-        [HttpGet("/Decks/DeckCategory={categoryId}")]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDeckCategoryDecks(int categoryId)
-        {
-            // Grab the deck category. Only possible for one or zero results since ids are unique.
-            var deckCategoryQuery = from dc in _context.DeckCategories
-                            where dc.CategoryID == categoryId
-                            select dc;
-            if (deckCategoryQuery.Count() == 0)
-            {
-                return BadRequest("Category id " + categoryId + " does not exist");
-            }
-            else
-            {
-                DeckCategory deckCategory = deckCategoryQuery.First();
-                var query = from d in _context.Decks
-                            where d.DeckCategories.Contains(deckCategory)
-                            select new DeckInfo
-                            {
-                                id = d.DeckID,
-                                title = d.Title,
-                                description = d.Description,
-                                access = d.Access.ToString(),
-                                default_flang = d.DefaultFrontLang.ToString(),
-                                default_blang = d.DefaultBackLang.ToString(),
-                                cards = d.Cards.Select(c => c.CardID).ToList(),
-                                ownerId = d.UserId,
-                                date_created = d.DateCreated,
-                                date_touched = d.DateTouched,
-                                date_updated = d.DateUpdated
-                            };
-                return await query.ToListAsync();
-            }
-        }
-        */
-
         // POST: /Decks/{id}
         /// <summary>
         /// Edits an existing Deck
@@ -290,7 +249,7 @@ namespace echoStudy_webAPI.Controllers
         /// </param>
         /// <response code="200">Returns the Id and DateUpdated of the edited Deck</response>
         /// <response code="400">Invalid input or input type</response>
-        /// <response code="404">Object at the deckId or userId provided was not found</response>
+        /// <response code="404">Object at the deckId provided was not found</response>
         [HttpPost("{id}")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(typeof(DeckUpdateResponse), StatusCodes.Status200OK)]
@@ -409,7 +368,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="404">Object at userId or cardId provided was not found</response>
         [HttpPost]
         [Produces("application/json", "text/plain")]
-        [ProducesResponseType(typeof(DeckCreationResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(DeckCreationResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PostDeckCreate(PostDeckInfo deckInfo)
@@ -532,171 +491,6 @@ namespace echoStudy_webAPI.Controllers
             });
         }
 
-        /*
- * Updates the given deck by id 
- */
-        /*
-        // PATCH: api/Decks/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPatch("{id}")]
-        public async Task<IActionResult> PatchDeck(int id, PostDeckInfo deckInfo)
-        {
-            var deckQuery = from d in _context.Decks.Include(d => d.Cards)
-                            where d.DeckID == id
-                            select d;
-            // Create the deck
-            if (deckQuery.Count() == 0)
-            {
-                return BadRequest("Deck " + id + " does not exist");
-            }
-            // Update the deck
-            else
-            {
-                Deck deck = deckQuery.First();
-
-                // Assign the owner
-                EchoUser user = await _userManager.FindByEmailAsync(deckInfo.userEmail);
-                if (user is null)
-                {
-                    return BadRequest("User " + deckInfo.userEmail + " not found");
-                }
-                else
-                {
-                    deck.UserId = user.Id;
-                }
-
-                // Set description, title
-                deck.Title = deckInfo.title;
-                deck.Description = deckInfo.description;
-
-                // Set the enums
-                switch (deckInfo.access.ToLower())
-                {
-                    case "public":
-                        deck.Access = Access.Public;
-                        break;
-                    case "private":
-                        deck.Access = Access.Private;
-                        break;
-                    default:
-                        return BadRequest("Valid access parameters are Public and Private");
-                }
-                switch (deckInfo.default_flang.ToLower())
-                {
-                    case "english":
-                        deck.DefaultFrontLang = Language.English;
-                        break;
-                    case "spanish":
-                        deck.DefaultFrontLang = Language.Spanish;
-                        break;
-                    case "japanese":
-                        deck.DefaultFrontLang = Language.Japanese;
-                        break;
-                    case "german":
-                        deck.DefaultFrontLang = Language.German;
-                        break;
-                    default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
-                }
-                switch (deckInfo.default_blang.ToLower())
-                {
-                    case "english":
-                        deck.DefaultBackLang = Language.English;
-                        break;
-                    case "spanish":
-                        deck.DefaultBackLang = Language.Spanish;
-                        break;
-                    case "japanese":
-                        deck.DefaultBackLang = Language.Japanese;
-                        break;
-                    case "german":
-                        deck.DefaultBackLang = Language.German;
-                        break;
-                    default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
-                }
-
-                // Assign it to the cards given by id (if there is any)
-                HashSet<Card> updatedCards = new HashSet<Card>();
-                foreach (int cardId in deckInfo.cardIds)
-                {
-                    // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from c in _context.Cards
-                                where c.CardID == cardId
-                                select c;
-                    if (query.Count() == 0)
-                    {
-                        return BadRequest("Deck id " + cardId + " does not exist");
-                    }
-                    else
-                    {
-                        Card card = query.First();
-                        // If they aren't already related, relate them
-                        if (!deck.Cards.Contains(card))
-                        {
-                            card.Deck = deck;
-                            deck.Cards.Add(card);
-                        }
-                        updatedCards.Add(card);
-                        _context.Entry(card).State = EntityState.Modified;
-                    }
-                }
-
-                // Change update date
-                deck.DateUpdated = DateTime.Now;
-
-                // Mark the deck as modified
-                _context.Entry(deck).State = EntityState.Modified;
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    return BadRequest("Failed to update deck");
-                }
-
-                return Ok(new { deck.DeckID });
-            }
-        }
-        */
-
-        /*
-        * Updates the given deck by id 
-        */
-        /*
-        // PATCH: api/Decks/Touch=1
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPatch("Touch={id}")]
-        public async Task<IActionResult> TouchDeck(int id)
-        {
-            var deckQuery = from d in _context.Decks
-                            where d.DeckID == id
-                            select d;
-            // Deck doesn't exist
-            if (deckQuery.Count() == 0)
-            {
-                return BadRequest("Deck " + id + " does not exist");
-            }
-            // Update the deck
-            else
-            {
-                Deck deck = deckQuery.First();
-
-                // Update touched date
-                deck.DateTouched = DateTime.Now;
-
-                // Mark the card as modified
-                _context.Entry(deck).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                return Ok(new { id = Deck.DeckID });
-            }
-        }
-        */
-
-
         // DELETE: /Decks/Delete/{id}
         /// <summary>
         /// Deletes one specific deck
@@ -705,7 +499,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="204"></response>
         /// <response code="404">Object at deckId was not found</response>
         [HttpPost("Delete/{id}")]
-        [Produces("application/json", "text/plain")]
+        [Produces("text/plain")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteDeck(int id)
@@ -730,7 +524,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="204"></response>
         /// <response code="404">Object at userId was not found</response>
         [HttpPost("Delete")]
-        [Produces("application/json", "text/plain")]
+        [Produces("text/plain")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteUserDecks(string userId)
