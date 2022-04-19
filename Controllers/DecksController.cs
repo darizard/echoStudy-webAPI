@@ -413,15 +413,22 @@ namespace echoStudy_webAPI.Controllers
             deck.Title = deckInfo.title;
             deck.Description = deckInfo.description;
             // Handle the enums with switch cases
-            switch (deckInfo.access.ToLower())
+            if (deckInfo.access is null) deck.Access = Access.Private;
+            else
             {
-                case "public":
-                    deck.Access = Access.Public;
-                    break;
-                default:
-                    deck.Access = Access.Private;
-                    break;
+                switch (deckInfo.access.ToLower())
+                {
+                    case "public":
+                        deck.Access = Access.Public;
+                        break;
+                    case "private":
+                        deck.Access = Access.Private;
+                        break;
+                    default:
+                        return BadRequest("access should be public, private, or omitted (default private)");
+                }
             }
+
             switch (deckInfo.default_flang.ToLower())
             {
                 case "english":
