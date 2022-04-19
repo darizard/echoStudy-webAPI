@@ -361,7 +361,7 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks>Default access level is Private. The cardIds list currently does nothing.</remarks>
         /// <returns>The id and creation date of the new deck</returns>
         [HttpPost]
-        public async Task<ActionResult<Deck>> PostDeckCreate(PostDeckInfo deckInfo)
+        public async Task<IActionResult> PostDeckCreate(PostDeckInfo deckInfo)
         {
             // Create and populate a deck with the given info
             Deck deck = new();

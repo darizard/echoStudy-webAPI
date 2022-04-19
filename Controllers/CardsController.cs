@@ -390,7 +390,7 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks></remarks>
         /// <returns>The id and creation date of the new card</returns>
         [HttpPost]
-        public async Task<ActionResult<Card>> PostCardCreate(PostCardInfo cardInfo)
+        public async Task<IActionResult> PostCardCreate(PostCardInfo cardInfo)
         {
             if (cardInfo.frontText is null)
             {
