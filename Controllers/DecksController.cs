@@ -10,11 +10,14 @@ using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("[controller]")]
     [ApiController]
+    [Route("[controller]")]
     public class DecksController : ControllerBase
     {
         private readonly EchoStudyDB _context;
@@ -59,6 +62,24 @@ namespace echoStudy_webAPI.Controllers
             public List<int> cardIds { get; set; }
         }
 
+        /**
+         * Define response type for Deck creation
+         */
+        public class DeckCreationResponse
+        {
+            public int id { get; set; }
+            public DateTime dateCreated { get; set; }
+        }
+
+        /**
+         * Define response type for Deck update
+         */
+        public class DeckUpdateResponse
+        {
+            public int id { get; set; }
+            public DateTime dateUpdated { get; set; }
+        }
+
         // GET: /Decks
         /// <summary>
         /// Retrieves all Deck objects or deck objects related to a user by Id or by Email
@@ -69,14 +90,22 @@ namespace echoStudy_webAPI.Controllers
         /// </remarks>
         /// <param name="userId">The ASP.NET Id of the related user. Overrides <c>userEmail</c> if present</param>
         /// <param name="userEmail">The email address of the related user</param>
-        /// <returns>A JSON list of Deck objects</returns>
+        /// <response code="200">Returns the queried Deck objects</response>
+        /// <response code="404">User not found with the provided Id or Email</response>
         [HttpGet]
+        [Produces("application/json", "text/plain")]
+        [SwaggerResponse(200, "Returns the queried Deck objects", typeof(IQueryable<DeckInfo>))]
+        [SwaggerResponse(404, "User not found with the provided Id or Email", typeof(string))]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks(string userId, string userEmail)
         {
             if(userId != null)
-            { 
+            {
+                EchoUser user = await _userManager.FindByIdAsync(userId);
+
+                if (user is null) return NotFound("provided userId not found");
+
                 var queryid = from d in _context.Decks
-                            where d.UserId == userId
+                            where d.UserId == user.Id
                             select new DeckInfo
                             {
                                 id = d.DeckID,
@@ -91,14 +120,16 @@ namespace echoStudy_webAPI.Controllers
                                 date_touched = d.DateTouched,
                                 date_updated = d.DateUpdated
                             };
-                return await queryid.ToListAsync();
+                return Ok(await queryid.ToListAsync());
             }
 
             if(userEmail != null)
             {
                 EchoUser user = await _userManager.FindByEmailAsync(userEmail);
 
-                var queryid = from d in _context.Decks
+                if (user is null) return NotFound("provided userEmail not found");
+
+                var queryemail = from d in _context.Decks
                               where d.UserId == user.Id
                               select new DeckInfo
                               {
@@ -114,7 +145,7 @@ namespace echoStudy_webAPI.Controllers
                                   date_touched = d.DateTouched,
                                   date_updated = d.DateUpdated
                               };
-                return await queryid.ToListAsync();
+                return Ok(await queryemail.ToListAsync());
             }
 
             var queryall = from d in _context.Decks
@@ -132,7 +163,7 @@ namespace echoStudy_webAPI.Controllers
                             date_touched = d.DateTouched,
                             date_updated = d.DateUpdated
                         };
-            return await queryall.ToListAsync();
+            return Ok(await queryall.ToListAsync());
         }
 
         // GET: /Decks/Public
@@ -142,8 +173,10 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks>
         /// All Decks with an access level of Public
         /// </remarks>
-        /// <returns>A JSON list of Deck objects</returns>
+        /// <response code="200">Returns all Public Deck objects</response>
         [HttpGet("Public")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDecks()
         {
             var query = from d in _context.Decks
@@ -162,7 +195,7 @@ namespace echoStudy_webAPI.Controllers
                             date_touched = d.DateTouched,
                             date_updated = d.DateUpdated
                         };
-            return await query.ToListAsync();
+            return Ok(await query.ToListAsync());
         }
 
         // GET: /Decks/{id}
@@ -172,8 +205,12 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks>
         /// <param name="id">Deck ID</param>
         /// </remarks>
-        /// <returns>A JSON Deck object</returns>
+        /// <response code="200">Returns the queried Deck object</response>
+        /// <response code="404">Deck object with the given id was not found</response>
         [HttpGet("{id}")]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(typeof(Deck), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<DeckInfo>> GetDeck(int id)
         {
             var query = from d in _context.Decks
@@ -198,7 +235,7 @@ namespace echoStudy_webAPI.Controllers
                 return NotFound("DeckId " + id + " was not found");
             }
 
-            return await query.FirstAsync();
+            return Ok(await query.FirstAsync());
         }
 
         //-------------------Keep commented method for when we are using JWTs? Can query by category here
@@ -253,8 +290,14 @@ namespace echoStudy_webAPI.Controllers
         /// <param name="deckInfo">
         /// Optional: title, description, default_flang, default_blang, userId, access, cardIds
         /// </param>
-        /// <returns>An Ok response if successful</returns>
+        /// <response code="200">Returns the Id and DateUpdated of the edited Deck</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="404">Object at the deckId or userId provided was not found</response>
         [HttpPost("{id}")]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(typeof(DeckUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PostDeckEdit(int id, PostDeckInfo deckInfo)
         {
             Deck deck;
@@ -336,7 +379,7 @@ namespace echoStudy_webAPI.Controllers
             if(deckInfo.userId is not null)
             {
                 EchoUser user = await _userManager.FindByIdAsync(deckInfo.userId);
-                if (user is null) return BadRequest("User " + deckInfo.userId + " not found");
+                if (user is null) return NotFound("User " + deckInfo.userId + " not found");
 
                 deck.UserId = user.Id;
             }
@@ -348,7 +391,11 @@ namespace echoStudy_webAPI.Controllers
             _context.Decks.Update(deck);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            return Ok(new DeckUpdateResponse
+            {
+                id = deck.DeckID,
+                dateUpdated = deck.DateUpdated
+            });
         }
 
         // POST: api/Decks
@@ -359,8 +406,14 @@ namespace echoStudy_webAPI.Controllers
         /// Required: title, description, default_flang, default_blang, userId -- Optional: access, cardIds
         /// </param>
         /// <remarks>Default access level is Private. The cardIds list currently does nothing.</remarks>
-        /// <returns>The id and creation date of the new deck</returns>
+        /// <response code="201">Returns the id and creation date of the created Deck</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="404">Object at userId or cardId provided was not found</response>
         [HttpPost]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(typeof(DeckCreationResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PostDeckCreate(PostDeckInfo deckInfo)
         {
             // Create and populate a deck with the given info
@@ -392,6 +445,7 @@ namespace echoStudy_webAPI.Controllers
             if (user is null) { return BadRequest("User " + deckInfo.userId + " not found"); }
             deck.UserId = user.Id;
 
+            /*
             IQueryable<dynamic> querycards;
             // Ensure all cards in deckInfo.cardIds exist and load them
             if(deckInfo.cardIds is not null)
@@ -408,6 +462,7 @@ namespace echoStudy_webAPI.Controllers
                     return NotFound("cardIds not found: " + JsonConvert.SerializeObject(querydiff));
                 }
             }
+            */
 
             //----------------Set the rest of the deck info
             deck.Title = deckInfo.title;
@@ -472,7 +527,7 @@ namespace echoStudy_webAPI.Controllers
             await _context.Decks.AddAsync(deck);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("PostDeckCreate", new
+            return CreatedAtAction("PostDeckCreate", new DeckCreationResponse
             {
                 id = deck.DeckID,
                 dateCreated = deck.DateCreated
@@ -649,8 +704,13 @@ namespace echoStudy_webAPI.Controllers
         /// Deletes one specific deck
         /// </summary>
         /// <param name="id">The deck's ID</param>
-        /// <returns>204 No Content response if successful</returns>
+        /// <response code="204">Returns the id and creation date of the created Deck</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="404">Object at User id or Card id provided was not found</response>
         [HttpPost("Delete/{id}")]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteDeck(int id)
         {
             var deck = await _context.Decks.FindAsync(id);
@@ -672,10 +732,16 @@ namespace echoStudy_webAPI.Controllers
         /// <param name="userId">The user's ID</param>
         /// <returns>204 No Content response if successful</returns>
         [HttpPost("Delete")]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteUserDecks(string userId)
         {
+            EchoUser user = await _userManager.FindByIdAsync(userId);
+            if (user is null) return NotFound("UserId " + userId + " was not found");
+
             var query = from d in _context.Decks
-                        where d.UserId == userId
+                        where d.UserId == user.Id
                         select d;
 
             List<Deck> userDecks = await query.ToListAsync();
