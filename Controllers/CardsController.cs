@@ -67,13 +67,14 @@ namespace echoStudy_webAPI.Controllers
         /// If userId or userEmail is specified, returns the cards related to the given user. If
         /// both parameters are specified, userId takes precedence.
         /// </remarks>
-        /// <param name="userId">The ASP.NET Id of the related user. Overrides <c>userEmail</c> if present</param>
-        /// <param name="userEmail">The email address of the related user</param>
+        /// <param name="userId">The ASP.NET Id of the related user. Overrides <c>userEmail</c> and <c>deckId</c> if present</param>
+        /// <param name="userEmail">The email address of the related user. Overrides <c>deckId</c> if present</param>
+        /// <param name="deckId">The ID of the related deck</param>"
         /// <returns>A JSON list of Card objects</returns>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CardInfo>>> GetCards(string userId, string userEmail)
+        public async Task<ActionResult<IEnumerable<CardInfo>>> GetCards(string userId, string userEmail, int? deckId)
         {
-            if (userId != null)
+            if (userId is not null)
             {
                 var queryid = from c in _context.Cards
                               where c.UserId == userId
@@ -96,7 +97,7 @@ namespace echoStudy_webAPI.Controllers
                 return await queryid.ToListAsync();
             }
 
-            if (userEmail != null)
+            if (userEmail is not null)
             {
                 EchoUser user = await _userManager.FindByEmailAsync(userEmail);
 
@@ -119,6 +120,29 @@ namespace echoStudy_webAPI.Controllers
                                   date_touched = c.DateTouched
                               };
                 return await queryemail.ToListAsync();
+            }
+
+            if(deckId is not null)
+            {
+                var querydeck = from c in _context.Cards
+                                 where c.DeckID == deckId
+                                 select new CardInfo
+                                 {
+                                     id = c.CardID,
+                                     ftext = c.FrontText,
+                                     btext = c.BackText,
+                                     faud = c.FrontAudio,
+                                     baud = c.BackAudio,
+                                     flang = c.FrontLang.ToString(),
+                                     blang = c.BackLang.ToString(),
+                                     deckId = c.Deck.DeckID,
+                                     score = c.Score,
+                                     ownerId = c.UserId,
+                                     date_created = c.DateCreated,
+                                     date_updated = c.DateUpdated,
+                                     date_touched = c.DateTouched
+                                 };
+                return await querydeck.ToListAsync();
             }
 
             var queryall = from c in _context.Cards
