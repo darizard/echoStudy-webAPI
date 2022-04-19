@@ -394,8 +394,8 @@ namespace echoStudy_webAPI.Data
                 card.BackText = splitCard[1].Trim();
                 card.FrontLang = frontLang;
                 card.BackLang = backLang;
-                card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
-                card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
+                card.FrontAudio = AmazonUploader.getFileName(card.FrontText, card.FrontLang);
+                card.BackAudio = AmazonUploader.getFileName(card.BackText, card.BackLang);
                 card.Score = 0;
                 card.UserId = owner.Id;
                 DateTime date = DateTime.Now.Add(randomTimeSpan());
