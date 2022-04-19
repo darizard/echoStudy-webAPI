@@ -704,13 +704,12 @@ namespace echoStudy_webAPI.Controllers
         /// Deletes one specific deck
         /// </summary>
         /// <param name="id">The deck's ID</param>
-        /// <response code="204">Returns the id and creation date of the created Deck</response>
-        /// <response code="400">Invalid input or input type</response>
-        /// <response code="404">Object at User id or Card id provided was not found</response>
+        /// <response code="204"></response>
+        /// <response code="404">Object at deckId was not found</response>
         [HttpPost("Delete/{id}")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteDeck(int id)
         {
             var deck = await _context.Decks.FindAsync(id);
@@ -730,7 +729,8 @@ namespace echoStudy_webAPI.Controllers
         /// Delete all of one user's decks
         /// </summary>
         /// <param name="userId">The user's ID</param>
-        /// <returns>204 No Content response if successful</returns>
+        /// <response code="204"></response>
+        /// <response code="404">Object at userId was not found</response>
         [HttpPost("Delete")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
