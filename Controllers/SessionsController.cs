@@ -14,6 +14,7 @@ namespace echoStudy_webAPI.Controllers
 {
     [Route("[controller]")]
     [ApiController]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public class SessionsController : ControllerBase
     {
         private readonly EchoStudyDB _context;
