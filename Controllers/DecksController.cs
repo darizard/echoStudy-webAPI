@@ -11,8 +11,6 @@ using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Swashbuckle.AspNetCore.Swagger;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -94,8 +92,8 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="404">User not found with the provided Id or Email</response>
         [HttpGet]
         [Produces("application/json", "text/plain")]
-        [SwaggerResponse(200, "Returns the queried Deck objects", typeof(IQueryable<DeckInfo>))]
-        [SwaggerResponse(404, "User not found with the provided Id or Email", typeof(string))]
+        [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks(string userId, string userEmail)
         {
             if(userId != null)
