@@ -61,7 +61,8 @@ namespace echoStudy_webAPI.Controllers
 
         // GET: /Cards
         /// <summary>
-        /// Retrieves all Card objects or Card objects related to a user by Id or by Email
+        /// Retrieves all Card objects, Card objects related to a user by Id or by Email, or Card
+        /// objects associated with a specific Deck
         /// </summary>
         /// <remarks>If no parameter is specified, returns all card objects.
         /// If userId or userEmail is specified, returns the cards related to the given user. If
@@ -76,7 +77,7 @@ namespace echoStudy_webAPI.Controllers
         {
             if (userId is not null)
             {
-                var queryid = from c in _context.Cards
+                var queryuserid = from c in _context.Cards
                               where c.UserId == userId
                               select new CardInfo
                               {
@@ -94,7 +95,7 @@ namespace echoStudy_webAPI.Controllers
                                   date_updated = c.DateUpdated,
                                   date_touched = c.DateTouched
                               };
-                return await queryid.ToListAsync();
+                return await queryuserid.ToListAsync();
             }
 
             if (userEmail is not null)
