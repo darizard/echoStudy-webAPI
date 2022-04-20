@@ -99,6 +99,10 @@ namespace echoStudy_webAPI.Controllers
         {
             if (userId is not null)
             {
+                EchoUser user = await _userManager.FindByIdAsync(userId);
+
+                if (user is null) return NotFound("provided userId not found");
+
                 var queryuserid = from c in _context.Cards
                                   where c.UserId == userId
                                   select new CardInfo
@@ -124,10 +128,7 @@ namespace echoStudy_webAPI.Controllers
             {
                 EchoUser user = await _userManager.FindByEmailAsync(userEmail);
 
-                if (user is null)
-                {
-                    return NotFound("No user is associated with the given email");
-                }
+                if (user is null) return NotFound("provided userId not found");
 
                 var queryemail = from c in _context.Cards
                                  where c.UserId == user.Id
