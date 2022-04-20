@@ -1,0 +1,16 @@
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Microsoft.VisualStudio.TestPlatform.MSTestAdapter.PlatformServices.Interface.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Microsoft.VisualStudio.TestPlatform.MSTestAdapter.PlatformServices.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\echoStudy-webAPI.Tests.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\echoStudy-webAPI.Tests.pdb
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.xml
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.xml
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\bin\Debug\Newtonsoft.Json.xml
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\obj\Debug\echoStudy-webAPI.Tests.csproj.AssemblyReference.cache
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\obj\Debug\echoStudy-webAPI.Tests.csproj.CoreCompileInputs.cache
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\obj\Debug\echoStudy-webAPI.Tests.csproj.CopyComplete
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\obj\Debug\echoStudy-webAPI.Tests.dll
+C:\Users\Mason\source\repos\echoStudy-webAPI.Tests\obj\Debug\echoStudy-webAPI.Tests.pdb
