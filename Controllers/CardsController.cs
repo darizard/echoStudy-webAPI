@@ -45,7 +45,7 @@ namespace echoStudy_webAPI.Controllers
             public DateTime date_updated { get; set; }
             public DateTime date_touched { get; set; }
         }
-        
+
         /**
          * This class should contain all information that should be provided in order to create or update a card
          */
@@ -100,23 +100,23 @@ namespace echoStudy_webAPI.Controllers
             if (userId is not null)
             {
                 var queryuserid = from c in _context.Cards
-                              where c.UserId == userId
-                              select new CardInfo
-                              {
-                                  id = c.CardID,
-                                  ftext = c.FrontText,
-                                  btext = c.BackText,
-                                  faud = c.FrontAudio,
-                                  baud = c.BackAudio,
-                                  flang = c.FrontLang.ToString(),
-                                  blang = c.BackLang.ToString(),
-                                  deckId = c.Deck.DeckID,
-                                  score = c.Score,
-                                  ownerId = c.UserId,
-                                  date_created = c.DateCreated,
-                                  date_updated = c.DateUpdated,
-                                  date_touched = c.DateTouched
-                              };
+                                  where c.UserId == userId
+                                  select new CardInfo
+                                  {
+                                      id = c.CardID,
+                                      ftext = c.FrontText,
+                                      btext = c.BackText,
+                                      faud = c.FrontAudio,
+                                      baud = c.BackAudio,
+                                      flang = c.FrontLang.ToString(),
+                                      blang = c.BackLang.ToString(),
+                                      deckId = c.DeckID,
+                                      score = c.Score,
+                                      ownerId = c.UserId,
+                                      date_created = c.DateCreated,
+                                      date_updated = c.DateUpdated,
+                                      date_touched = c.DateTouched
+                                  };
                 return Ok(await queryuserid.ToListAsync());
             }
 
@@ -124,31 +124,13 @@ namespace echoStudy_webAPI.Controllers
             {
                 EchoUser user = await _userManager.FindByEmailAsync(userEmail);
 
-                var queryemail = from c in _context.Cards
-                              where c.UserId == user.Id
-                              select new CardInfo
-                              {
-                                  id = c.CardID,
-                                  ftext = c.FrontText,
-                                  btext = c.BackText,
-                                  faud = c.FrontAudio,
-                                  baud = c.BackAudio,
-                                  flang = c.FrontLang.ToString(),
-                                  blang = c.BackLang.ToString(),
-                                  deckId = c.Deck.DeckID,
-                                  score = c.Score,
-                                  ownerId = c.UserId,
-                                  date_created = c.DateCreated,
-                                  date_updated = c.DateUpdated,
-                                  date_touched = c.DateTouched
-                              };
-                return Ok(await queryemail.ToListAsync());
-            }
+                if (user is null)
+                {
+                    return NotFound("No user is associated with the given email");
+                }
 
-            if(deckId is not null)
-            {
-                var querydeck = from c in _context.Cards
-                                 where c.DeckID == deckId
+                var queryemail = from c in _context.Cards
+                                 where c.UserId == user.Id
                                  select new CardInfo
                                  {
                                      id = c.CardID,
@@ -158,13 +140,36 @@ namespace echoStudy_webAPI.Controllers
                                      baud = c.BackAudio,
                                      flang = c.FrontLang.ToString(),
                                      blang = c.BackLang.ToString(),
-                                     deckId = c.Deck.DeckID,
+                                     deckId = c.DeckID,
                                      score = c.Score,
                                      ownerId = c.UserId,
                                      date_created = c.DateCreated,
                                      date_updated = c.DateUpdated,
                                      date_touched = c.DateTouched
                                  };
+                return Ok(await queryemail.ToListAsync());
+            }
+
+            if (deckId is not null)
+            {
+                var querydeck = from c in _context.Cards
+                                where c.DeckID == deckId
+                                select new CardInfo
+                                {
+                                    id = c.CardID,
+                                    ftext = c.FrontText,
+                                    btext = c.BackText,
+                                    faud = c.FrontAudio,
+                                    baud = c.BackAudio,
+                                    flang = c.FrontLang.ToString(),
+                                    blang = c.BackLang.ToString(),
+                                    deckId = c.DeckID,
+                                    score = c.Score,
+                                    ownerId = c.UserId,
+                                    date_created = c.DateCreated,
+                                    date_updated = c.DateUpdated,
+                                    date_touched = c.DateTouched
+                                };
                 return Ok(await querydeck.ToListAsync());
             }
 
@@ -178,7 +183,7 @@ namespace echoStudy_webAPI.Controllers
                                baud = c.BackAudio,
                                flang = c.FrontLang.ToString(),
                                blang = c.BackLang.ToString(),
-                               deckId = c.Deck.DeckID,
+                               deckId = c.DeckID,
                                score = c.Score,
                                ownerId = c.UserId,
                                date_created = c.DateCreated,
@@ -214,7 +219,7 @@ namespace echoStudy_webAPI.Controllers
                             baud = c.BackAudio,
                             flang = c.FrontLang.ToString(),
                             blang = c.BackLang.ToString(),
-                            deckId = c.Deck.DeckID,
+                            deckId = c.DeckID,
                             score = c.Score,
                             ownerId = c.UserId,
                             date_created = c.DateCreated,
@@ -286,8 +291,8 @@ namespace echoStudy_webAPI.Controllers
         {
             Card card;
             var cardQuery = from c in _context.Cards
-                        where c.CardID == id
-                        select c;
+                            where c.CardID == id
+                            select c;
             if ((card = cardQuery.First()) is null) return NotFound("Card id " + id + " not found");
 
             //-------Update according to incoming info
@@ -302,31 +307,31 @@ namespace echoStudy_webAPI.Controllers
             {
                 card.FrontText = cardInfo.frontText;
             }
-            if(cardInfo.backText is not null)
+            if (cardInfo.backText is not null)
             {
                 card.BackText = cardInfo.backText;
             }
-            if(cardInfo.frontLang is not null)
+            if (cardInfo.frontLang is not null)
             {
                 switch (cardInfo.frontLang.ToLower())
                 {
-                        case "english":
-                            card.FrontLang = Language.English;
-                    break;
-                        case "spanish":
-                            card.FrontLang = Language.Spanish;
-                    break;
-                        case "japanese":
-                            card.FrontLang = Language.Japanese;
-                    break;
-                        case "german":
-                            card.FrontLang = Language.German;
-                    break;
+                    case "english":
+                        card.FrontLang = Language.English;
+                        break;
+                    case "spanish":
+                        card.FrontLang = Language.Spanish;
+                        break;
+                    case "japanese":
+                        card.FrontLang = Language.Japanese;
+                        break;
+                    case "german":
+                        card.FrontLang = Language.German;
+                        break;
                     default:
-                            return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
                 }
             }
-            if(cardInfo.backLang is not null)
+            if (cardInfo.backLang is not null)
             {
                 switch (cardInfo.backLang.ToLower())
                 {
@@ -363,12 +368,12 @@ namespace echoStudy_webAPI.Controllers
                             where d.DeckID == card.DeckID || d.DeckID == olddeckid
                             select d;
 
-            foreach(var deck in deckquery)
+            foreach (var deck in deckquery)
             {
                 deck.DateUpdated = card.DateUpdated;
                 _context.Decks.Update(deck);
             }
-            
+
             try
             {
                 await _context.SaveChangesAsync();
@@ -441,13 +446,14 @@ namespace echoStudy_webAPI.Controllers
 
             // Create a card and assign it all of the basic provided data
             Card card = new Card();
-            
+
             EchoUser user = await _userManager.FindByIdAsync(cardInfo.userId);
             if (user is null) return BadRequest("User " + cardInfo.userId + " not found");
             card.UserId = user.Id;
 
             card.FrontText = cardInfo.frontText;
             card.BackText = cardInfo.backText;
+            card.DeckID = (int)cardInfo.deckId;
 
             switch (cardInfo.frontLang.ToLower())
             {
@@ -491,8 +497,9 @@ namespace echoStudy_webAPI.Controllers
             card.Score = 0;
             card.DeckPosition = "";
 
-            // Ready to add
-            _context.Cards.Add(card);
+            // Make Polly calls
+            card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
+            card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
 
             // Get the related deck and update its DateUpdated
             var deckQuery = from d in _context.Decks
@@ -503,8 +510,12 @@ namespace echoStudy_webAPI.Controllers
                 return NotFound("Deck ID " + cardInfo.deckId + " not found");
             }
             Deck deck = deckQuery.First();
+            card.Deck = deck;
             deck.DateUpdated = card.DateUpdated;
             _context.Decks.Update(deck);
+
+            // Ready to add
+            _context.Cards.Add(card);
 
             try
             {
@@ -514,10 +525,6 @@ namespace echoStudy_webAPI.Controllers
             {
                 return StatusCode(500);
             }
-
-            // Make Polly calls once the db is updated
-            card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
-            card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
 
             return CreatedAtAction("PostCardCreate", new CardCreationResponse
             {

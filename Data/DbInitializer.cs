@@ -403,6 +403,8 @@ namespace echoStudy_webAPI.Data
                 card.DateTouched = date.Add(randomTimeSpan());
                 card.DateUpdated = date.Add(randomTimeSpan());
                 card.Deck = deck;
+                card.DeckID = deck.DeckID;
+                deck.Cards.Add(card);
                 cards[i] = card;
             }
 
