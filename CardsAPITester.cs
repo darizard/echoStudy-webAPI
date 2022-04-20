@@ -15,10 +15,30 @@ namespace echoStudy_webAPI.Tests
         public HttpClient client;
         public string johnDoeId;
 
+        // Determines whether localhost or api.echostudy.com is tested
+        public bool testDevelopment = true;
+
         public CardsAPITester()
         {
-            client = new HttpClient();
-            client.BaseAddress = new Uri("https://localhost:44397/");
+            if (testDevelopment)
+            {
+                client = new HttpClient();
+                client.BaseAddress = new Uri("https://localhost:44397/");
+            }
+            else
+            {
+                var handler = new HttpClientHandler();
+                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                handler.ServerCertificateCustomValidationCallback =
+                (httpRequestMessage, cert, cetChain, policyErrors) =>
+                {
+                    return true;
+                };
+
+                client = new HttpClient(handler);
+                client.BaseAddress = new Uri("http://api.echostudy.com/");
+            }
+
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
