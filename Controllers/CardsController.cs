@@ -361,6 +361,17 @@ namespace echoStudy_webAPI.Controllers
             }
             // Dates
             card.DateUpdated = DateTime.Now;
+
+            // if we changed the text or language of the front or back of the card, make a call to Polly
+            if (cardInfo.frontLang is not null || cardInfo.frontText is not null)
+            {
+                card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
+            }
+            if (cardInfo.backLang is not null || cardInfo.backText is not null)
+            {
+                card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
+            }
+
             _context.Cards.Update(card);
 
             // Get the deck(s) whose DateUpdated needs to be changed
@@ -382,17 +393,6 @@ namespace echoStudy_webAPI.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 return StatusCode(500);
-            }
-
-            // Make Polly calls once the DB is updated
-            // if we changed the text or language of the front or back of the card, make a call to Polly
-            if (cardInfo.frontLang is not null || cardInfo.frontText is not null)
-            {
-                card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
-            }
-            if (cardInfo.backLang is not null || cardInfo.backText is not null)
-            {
-                card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
             }
 
             return Ok(new CardUpdateResponse
