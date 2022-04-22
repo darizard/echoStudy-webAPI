@@ -51,8 +51,8 @@ namespace echoStudy_webAPI
             {
                 options.AddPolicy("CorsPolicy",
                     builder => builder
-                        .WithOrigins("http://localhost:3000, " +
-                                     "http://echostudy.com, " +
+                        .WithOrigins("http://localhost:3000",
+                                     "http://echostudy.com",
                                      "https://echostudy.com")
                         .AllowAnyMethod()
                         .AllowAnyHeader()
