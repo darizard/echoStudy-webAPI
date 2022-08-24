@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace echoStudy_webAPI.Data
@@ -36,6 +38,23 @@ namespace echoStudy_webAPI.Data
 
             // Send the request to upload the file
             PutObjectResponse objResp = client.PutObjectAsync(objReq).Result;
+        }
+
+        /**
+         * Gets a presigned URL for the audio file related to the text and language provided
+        * Throws an error if the file doesn't exist
+        */
+        public static string getPresignedUrl(string text, Language language)
+        {
+            // Create a GetPresignedUrlRequest and intialize it
+            GetPreSignedUrlRequest urlReq = new GetPreSignedUrlRequest();
+            urlReq.BucketName = Resources.bucketName;
+            urlReq.Key = getFileName(text, language);
+            urlReq.Expires = DateTime.Now.AddHours(1);
+            urlReq.Protocol = Protocol.HTTP; 
+
+            // Send the request to get the url
+            return client.GetPreSignedURL(urlReq);
         }
 
         /**
@@ -84,7 +103,25 @@ namespace echoStudy_webAPI.Data
          */
         public static string getFileName(string text, Language language)
         {
+            // for now everything expects this. should be replaced with code below
             return language.ToString() + " " + text + ".mp3";
+
+            // Get a random hashed string obtained from a string made from the language and text
+            string hashedText = Encoding.ASCII.GetString(SHA1.HashData(Encoding.ASCII.GetBytes(language.ToString() + " " + text)));
+
+            // Remove any illegal file name characters
+            hashedText = ReplaceInvalidChars(hashedText);
+
+            // Final file name
+            return hashedText + ".mp3";
+        }
+
+        /**
+         * Second Answer from https://stackoverflow.com/questions/146134/how-to-remove-illegal-characters-from-path-and-filenames
+         */
+        private static string ReplaceInvalidChars(string filename)
+        {
+            return string.Join("_", filename.Split(Path.GetInvalidFileNameChars()));
         }
     }
 }
