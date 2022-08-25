@@ -103,25 +103,16 @@ namespace echoStudy_webAPI.Data
          */
         public static string getFileName(string text, Language language)
         {
-            // for now everything expects this. should be replaced with code below
-            return language.ToString() + " " + text + ".mp3";
+            string fileName = language.ToString() + " " + text + ".mp3";
 
-            // Get a random hashed string obtained from a string made from the language and text
-            string hashedText = Encoding.ASCII.GetString(SHA1.HashData(Encoding.ASCII.GetBytes(language.ToString() + " " + text)));
+            return fileName;
 
-            // Remove any illegal file name characters
-            hashedText = ReplaceInvalidChars(hashedText);
+            foreach (var c in Path.GetInvalidFileNameChars())
+            {
+                fileName = fileName.Replace(c, '_');
+            }
 
-            // Final file name
-            return hashedText + ".mp3";
-        }
-
-        /**
-         * Second Answer from https://stackoverflow.com/questions/146134/how-to-remove-illegal-characters-from-path-and-filenames
-         */
-        private static string ReplaceInvalidChars(string filename)
-        {
-            return string.Join("_", filename.Split(Path.GetInvalidFileNameChars()));
+            return fileName;
         }
     }
 }
