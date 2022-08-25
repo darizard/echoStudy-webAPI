@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.PlatformAbstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System;
@@ -17,6 +16,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace echoStudy_webAPI
 {
@@ -35,7 +35,7 @@ namespace echoStudy_webAPI
 
             services.AddControllers()
                     .AddNewtonsoftJson(options =>
-    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
+                        options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore
 );
 
             services.AddDbContext<EchoStudyDB>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
@@ -59,16 +59,14 @@ namespace echoStudy_webAPI
                         .AllowCredentials());
             });
 
-
             services.AddSwaggerGen(c =>
             {
-                var path = PlatformServices.Default.Application.ApplicationBasePath;
+                var path = AppContext.BaseDirectory;
                 var file = typeof(Startup).GetTypeInfo().Assembly.GetName().Name + ".xml";
 
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "echoStudy_webAPI", Version = "v1" });
-                c.IncludeXmlComments(Path.Combine(path,file));
+                c.IncludeXmlComments(Path.Combine(path, file));
             });
-            
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -80,15 +78,14 @@ namespace echoStudy_webAPI
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "echoStudy_webAPI v1"));
             }
-
             
             app.UseHttpsRedirection();
 
             app.UseRouting();
             
             app.UseCors("CorsPolicy");
-            //app.UseAuthorization //put this here
             app.UseAuthentication();
+            //app.UseAuthorization(); //put this here
 
             app.UseEndpoints(endpoints =>
             {
