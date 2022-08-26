@@ -41,7 +41,7 @@ namespace echoStudy_webAPI.Data
         }
 
         /**
-         * Gets a presigned URL for the audio file related to the text and language provided
+        * Gets a presigned URL for the audio file related to the text and language provided
         * Throws an error if the file doesn't exist
         */
         public static string getPresignedUrl(string text, Language language)
@@ -50,7 +50,7 @@ namespace echoStudy_webAPI.Data
             GetPreSignedUrlRequest urlReq = new GetPreSignedUrlRequest();
             urlReq.BucketName = Resources.bucketName;
             urlReq.Key = getFileName(text, language);
-            urlReq.Expires = DateTime.Now.AddHours(1);
+            urlReq.Expires = DateTime.Now.AddMinutes(10);
             urlReq.Protocol = Protocol.HTTP; 
 
             // Send the request to get the url
@@ -104,13 +104,6 @@ namespace echoStudy_webAPI.Data
         public static string getFileName(string text, Language language)
         {
             string fileName = language.ToString() + " " + text + ".mp3";
-
-            return fileName;
-
-            foreach (var c in Path.GetInvalidFileNameChars())
-            {
-                fileName = fileName.Replace(c, '_');
-            }
 
             return fileName;
         }
