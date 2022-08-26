@@ -10,6 +10,7 @@ using echoStudy_webAPI.Data;
 using Microsoft.AspNetCore.Identity;
 using echoStudy_webAPI.Areas.Identity.Data;
 using System.Net.Http;
+using Microsoft.AspNetCore.Authorization;
 
 namespace echoStudy_webAPI.Controllers
 {
