@@ -99,13 +99,29 @@ namespace echoStudy_webAPI.Data
         }
 
         /**
-         * Gets the file name that should be used for a given text and language
+        * Taken from https://stackoverflow.com/questions/311165/how-do-you-convert-a-byte-array-to-a-hexadecimal-string-and-vice-versa
+        * Converts a byte array to a a hexadecimal string
+        */
+        private static string ByteArrayToHexString(byte[] ba)
+        {
+            StringBuilder hex = new StringBuilder(ba.Length * 2);
+            foreach (byte b in ba)
+            {
+                hex.AppendFormat("{0:x2}", b);
+            }
+            return hex.ToString();
+        }
+
+        /**
+         * Gets the file name that should be used for a given term's audio (text and language).
          */
         public static string getFileName(string text, Language language)
         {
-            string fileName = language.ToString() + " " + text + ".mp3";
-
-            return fileName;
+            return language.ToString() + " " + text + ".mp3";
+            // use this once all audio files are on s3. otherwise backend will probably throw errors
+            string fileName = language.ToString() + " " + text;
+            fileName = ByteArrayToHexString(SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(fileName)));
+            return fileName + ".mp3";
         }
     }
 }
