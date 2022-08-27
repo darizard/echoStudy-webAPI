@@ -58,6 +58,23 @@ namespace echoStudy_webAPI.Data
         }
 
         /**
+        * Gets a presigned URL for the audio file related to the text and language provided
+        * Throws an error if the file doesn't exist
+        */
+        public static string getPresignedUrl(string fileName)
+        {
+            // Create a GetPresignedUrlRequest and intialize it
+            GetPreSignedUrlRequest urlReq = new GetPreSignedUrlRequest();
+            urlReq.BucketName = Resources.bucketName;
+            urlReq.Key = fileName;
+            urlReq.Expires = DateTime.Now.AddMinutes(10);
+            urlReq.Protocol = Protocol.HTTP;
+
+            // Send the request to get the url
+            return client.GetPreSignedURL(urlReq);
+        }
+
+        /**
          * Checks if the given key exists in the given bucket
          */
         public static async Task<bool> fileExists(string bucket, string text, Language language)
@@ -117,10 +134,11 @@ namespace echoStudy_webAPI.Data
          */
         public static string getFileName(string text, Language language)
         {
-            return language.ToString() + " " + text + ".mp3";
-            // use this once all audio files are on s3. otherwise backend will probably throw errors
             string fileName = language.ToString() + " " + text;
+
+            // Ensure no illegal characters
             fileName = ByteArrayToHexString(SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(fileName)));
+
             return fileName + ".mp3";
         }
     }
