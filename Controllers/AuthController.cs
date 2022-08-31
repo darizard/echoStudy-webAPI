@@ -16,21 +16,20 @@ namespace echoStudy_webAPI.Controllers
     //auth controller endpoints work from the base application URL
     [Route("")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : EchoControllerBase
     {
-        private readonly EchoStudyDB _context_TA_DB;
+        private readonly EchoStudyDB _context_EchoStudyDB;
         private readonly IConfiguration _configuration;
         private static UserManager<EchoUser> _um;
-        private readonly IJwtAuthenticationManager _jwtManager;
-
+        
         public AuthController(EchoStudyDB echoStudyDB, IConfiguration configuration,
                               UserManager<EchoUser> um,
-                              IJwtAuthenticationManager jwtManager)
+                              IJwtAuthenticationManager jwtManager) : base(jwtManager)
         {
-            _context_TA_DB = echoStudyDB;
+            _context_EchoStudyDB = echoStudyDB;
             _configuration = configuration;
             _um = um;
-            _jwtManager = jwtManager;
+            
         }
 
         // POST: /Authenticate

@@ -16,12 +16,14 @@ namespace echoStudy_webAPI.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class CardsController : ControllerBase
+    [AllowAnonymous]
+    public class CardsController : EchoControllerBase
     {
         private readonly EchoStudyDB _context;
         private readonly UserManager<EchoUser> _userManager;
 
-        public CardsController(EchoStudyDB context, UserManager<EchoUser> userManager)
+        public CardsController(EchoStudyDB context, UserManager<EchoUser> userManager,
+                               IJwtAuthenticationManager jwtManager) : base(jwtManager)
         {
             _context = context;
             _userManager = userManager;
