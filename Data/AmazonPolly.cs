@@ -64,23 +64,19 @@ namespace echoStudy_webAPI.Data
 
                 // Send the voice request and retrieve the voiceId for the speech request
                 DescribeVoicesResponse voiceResp = client.DescribeVoicesAsync(voiceReq).Result;
-                bool neuralFound = false;
+                bool voiceFound = false;
                 foreach (Voice voice in voiceResp.Voices)
                 {
-                    if (voice.SupportedEngines.Contains(Engine.Neural))
+                    if (voice.Name == targetVoice)
                     {
-                        if(voice.Name == targetVoice)
-                        {
-                            speechReq.VoiceId = voice.Id;
-                            neuralFound = true;
-                            break;
-                        }
+                        speechReq.VoiceId = voice.Id;
+                        voiceFound = true;
+                        break;
                     }
                 }
-                if (!neuralFound)
+                if (!voiceFound)
                 {
-                    speechReq.Engine = Engine.Standard;
-                    speechReq.VoiceId = voiceResp.Voices.First().Id;
+                    throw new Exception("Target voice for the language " + language.ToString() + " named \"" + targetVoice + "\" was not found.");
                 }
 
                 // Send the request
