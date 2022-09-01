@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using echoStudy_webAPI.Data;
 using System.Threading.Tasks;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Http;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -16,19 +17,21 @@ namespace echoStudy_webAPI.Controllers
     //auth controller endpoints work from the base application URL
     [Route("")]
     [ApiController]
-    public class AuthController : EchoControllerBase
+    public class AuthController : ControllerBase
     {
         private readonly EchoStudyDB _context_EchoStudyDB;
         private readonly IConfiguration _configuration;
         private static UserManager<EchoUser> _um;
+        private readonly IJwtAuthenticationManager _jwtManager;
         
         public AuthController(EchoStudyDB echoStudyDB, IConfiguration configuration,
                               UserManager<EchoUser> um,
-                              IJwtAuthenticationManager jwtManager) : base(jwtManager)
+                              IJwtAuthenticationManager jwtManager)
         {
             _context_EchoStudyDB = echoStudyDB;
             _configuration = configuration;
             _um = um;
+            _jwtManager = jwtManager;
             
         }
 
@@ -43,6 +46,22 @@ namespace echoStudy_webAPI.Controllers
         //          "username": "<valid user>",
         //          "password": "<matching password>"
         //      }
+        /// <summary>
+        /// Generates and produces a JSON Web Token object for use in
+        /// authentication and authorization for subsequent API calls.
+        /// </summary>
+        /// <remarks>If no parameter is specified, returns all deck objects.
+        /// If userId or userEmail is specified, returns the decks related to the given user. If
+        /// both parameters are specified, userId takes precedence.
+        /// </remarks>
+        /// <param name="userCreds">Credentials of the authenticating user (Subject)</param>
+        /// <response code="200">Returns the JSON Web Token object</response>
+        /// <response code="401">Invalids User Credentials were provided</response>
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        // I have no idea how to get this to show the actual fields of the object returned by
+        // `return Unauthorized();`
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [HttpPost("authenticate")]
         [AllowAnonymous]
         public async Task<IActionResult> Authenticate([FromBody] UserCreds userCreds)
@@ -51,10 +70,10 @@ namespace echoStudy_webAPI.Controllers
             if (!await _um.CheckPasswordAsync(user, userCreds.password) 
                 || user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
 
-            var token = _jwtManager.Authenticate(user.Email);
+            var token = _jwtManager.Authenticate(user);
             return Ok(token);
         }
 
@@ -74,14 +93,5 @@ namespace echoStudy_webAPI.Controllers
 
             return token.ToString();
         }
-
-        /*
-        // GET api/<AuthController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
-        */
     }
 }

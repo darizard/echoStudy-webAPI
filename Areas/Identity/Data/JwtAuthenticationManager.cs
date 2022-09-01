@@ -3,12 +3,13 @@ using System.Security.Claims;
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using echoStudy_webAPI.Areas.Identity.Data;
 
 namespace echoStudy_webAPI.Data
 {
     public interface IJwtAuthenticationManager
     {
-        string Authenticate(string username);
+        string Authenticate(EchoUser user);
     }
 
     public class JwtAuthenticationManager : IJwtAuthenticationManager
@@ -20,7 +21,7 @@ namespace echoStudy_webAPI.Data
             _key = key;
         }
 
-        public string Authenticate(string username)
+        public string Authenticate(EchoUser user)
         {
             // need a security token handler
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -33,10 +34,11 @@ namespace echoStudy_webAPI.Data
                 // TODO: This probably needs to be changed. Check what the resulting Jwt looks like!
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Email, username)
+                    new Claim("sub", user.Id.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email) // we can add more to the JWT payload here
                 }),
                 // TEST VALUE. Change token expiry window for staging/prod
-                Expires = DateTime.UtcNow.AddHours(1),
+                Expires = DateTime.UtcNow.AddMinutes(30),
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(tokenKey),
                     SecurityAlgorithms.HmacSha256Signature)

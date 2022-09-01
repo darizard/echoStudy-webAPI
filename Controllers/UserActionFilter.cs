@@ -1,4 +1,5 @@
-﻿using echoStudy_webAPI.Data;
+﻿using echoStudy_webAPI.Areas.Identity.Data;
+using echoStudy_webAPI.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System;
@@ -7,16 +8,17 @@ using System.Threading.Tasks;
 
 namespace echoStudy_webAPI.Controllers
 {
-    public class EchoControllerBase : ControllerBase, IAsyncActionFilter
+    public class UserActionFilter : ControllerBase, IAsyncActionFilter
     {
         protected readonly IJwtAuthenticationManager _jwtManager;
+        protected readonly EchoUser _user;
 
-        public EchoControllerBase(IJwtAuthenticationManager jwtManager)
+        public UserActionFilter(IJwtAuthenticationManager jwtManager)
         {
             _jwtManager = jwtManager;
         }
 
-        // this is necessary to get endpoints.MapControllers() in Startup.cs not to throw an error
+        // [NonAction] is necessary to get endpoints.MapControllers() in Startup.cs not to throw an error
         // otherwise it thinks this function is a controller action that accepts two complex types
         // which is not possible
         [NonAction]

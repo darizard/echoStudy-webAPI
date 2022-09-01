@@ -9,7 +9,6 @@ using echoStudy_webAPI.Models;
 using echoStudy_webAPI.Data;
 using Microsoft.AspNetCore.Identity;
 using echoStudy_webAPI.Areas.Identity.Data;
-using System.Net.Http;
 using Microsoft.AspNetCore.Authorization;
 
 namespace echoStudy_webAPI.Controllers
@@ -17,16 +16,14 @@ namespace echoStudy_webAPI.Controllers
     [ApiController]
     [Route("[controller]")]
     [AllowAnonymous]
-    public class CardsController : EchoControllerBase
+    public class CardsController : EchoUserControllerBase
     {
         private readonly EchoStudyDB _context;
-        private readonly UserManager<EchoUser> _userManager;
 
-        public CardsController(EchoStudyDB context, UserManager<EchoUser> userManager,
-                               IJwtAuthenticationManager jwtManager) : base(jwtManager)
+        public CardsController(EchoStudyDB context, UserManager<EchoUser> um)
+            : base(um)
         {
             _context = context;
-            _userManager = userManager;
         }
 
         /**
@@ -102,7 +99,7 @@ namespace echoStudy_webAPI.Controllers
         {
             if (userId is not null)
             {
-                EchoUser user = await _userManager.FindByIdAsync(userId);
+                EchoUser user = await _um.FindByIdAsync(userId);
 
                 if (user is null) return NotFound("provided userId not found");
 
@@ -129,7 +126,7 @@ namespace echoStudy_webAPI.Controllers
 
             if (userEmail is not null)
             {
-                EchoUser user = await _userManager.FindByEmailAsync(userEmail);
+                EchoUser user = await _um.FindByEmailAsync(userEmail);
 
                 if (user is null) return NotFound("provided userId not found");
 
@@ -302,7 +299,7 @@ namespace echoStudy_webAPI.Controllers
             //-------Update according to incoming info
             if (cardInfo.userId is not null)
             {
-                EchoUser user = await _userManager.FindByIdAsync(cardInfo.userId);
+                EchoUser user = await _um.FindByIdAsync(cardInfo.userId);
                 if (user is null) return BadRequest("User " + cardInfo.userId + " not found");
 
                 card.UserId = user.Id;
@@ -451,7 +448,7 @@ namespace echoStudy_webAPI.Controllers
             // Create a card and assign it all of the basic provided data
             Card card = new Card();
 
-            EchoUser user = await _userManager.FindByIdAsync(cardInfo.userId);
+            EchoUser user = await _um.FindByIdAsync(cardInfo.userId);
             if (user is null) return BadRequest("User " + cardInfo.userId + " not found");
             card.UserId = user.Id;
 
