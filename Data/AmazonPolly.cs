@@ -38,19 +38,26 @@ namespace echoStudy_webAPI.Data
                 speechReq.OutputFormat = OutputFormat.Mp3;
                 speechReq.Text = text;
                 speechReq.TextType = TextType.Text;
+
+                // Set the language and the desired voice
+                string targetVoice = "";
                 switch (language)
                 {
                     case Language.English:
                         speechReq.LanguageCode = voiceReq.LanguageCode = LanguageCode.EnUS;
+                        targetVoice = "Salli";
                         break;
                     case Language.Spanish:
                         speechReq.LanguageCode = voiceReq.LanguageCode = LanguageCode.EsES;
+                        targetVoice = "Lucia";
                         break;
                     case Language.German:
                         speechReq.LanguageCode = voiceReq.LanguageCode = LanguageCode.DeDE;
+                        targetVoice = "Vicki";
                         break;
                     case Language.Japanese:
                         speechReq.LanguageCode = voiceReq.LanguageCode = LanguageCode.JaJP;
+                        targetVoice = "Takumi";
                         break;
                 }
                 
@@ -62,9 +69,12 @@ namespace echoStudy_webAPI.Data
                 {
                     if (voice.SupportedEngines.Contains(Engine.Neural))
                     {
-                        speechReq.VoiceId = voice.Id;
-                        neuralFound = true;
-                        break;
+                        if(voice.Name == targetVoice)
+                        {
+                            speechReq.VoiceId = voice.Id;
+                            neuralFound = true;
+                            break;
+                        }
                     }
                 }
                 if (!neuralFound)
