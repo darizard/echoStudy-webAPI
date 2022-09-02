@@ -1,7 +1,9 @@
 ﻿using Amazon;
 using Amazon.Polly;
 using Amazon.Polly.Model;
+using echoStudy_webAPI.Models;
 using echoStudy_webAPI.Properties;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -87,6 +89,41 @@ namespace echoStudy_webAPI.Data
             }
             // Return the file name
             return AmazonUploader.getFileName(text, language);
+        }
+
+        /**
+         * Replaces audio files on the s3 echo study bucket for a given language.
+         * Only use this method if the local database is populated with the desired cards to be replaced (seed data)
+         */
+        public static async void replaceAudioFiles(EchoStudyDB echoContext, Language language)
+        {
+            // Front terms
+            var cards = from c in echoContext.Cards
+                        where c.FrontLang == language
+                        select new
+                        {
+                            text = c.FrontText
+                        };
+            var terms = await cards.ToListAsync();
+            foreach (var term in cards)
+            {
+                string text = term.text.ToString();
+                AmazonPolly.createTextToSpeechAudio(text, language);
+            }
+
+            // Back terms
+            var cards2 = from c in echoContext.Cards
+                         where c.BackLang == language
+                         select new
+                         {
+                             text = c.BackText
+                         };
+            var terms2 = await cards2.ToListAsync();
+            foreach (var term in cards2)
+            {
+                string text = term.text.ToString();
+                AmazonPolly.createTextToSpeechAudio(text, language);
+            }
         }
     }
 }
