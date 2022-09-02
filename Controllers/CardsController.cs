@@ -15,7 +15,6 @@ namespace echoStudy_webAPI.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    [AllowAnonymous]
     public class CardsController : EchoUserControllerBase
     {
         private readonly EchoStudyDB _context;
@@ -79,59 +78,46 @@ namespace echoStudy_webAPI.Controllers
 
         // GET: /Cards
         /// <summary>
-        /// Retrieves all Card objects, Card objects related to a user by Id or by Email, or Card
-        /// objects associated with a specific Deck
+        /// Retrieves all Card objects owned by the authenticated user or all Card
+        /// objects associated with a specific Deck owned by the authenticated user
         /// </summary>
-        /// <remarks>If no parameter is specified, returns all card objects.
-        /// If userId or userEmail is specified, returns the cards related to the given user. If
-        /// both parameters are specified, userId takes precedence.
+        /// <remarks>
         /// </remarks>
-        /// <param name="userId">The ASP.NET Id of the related user. Overrides <c>userEmail</c> and <c>deckId</c> if present</param>
-        /// <param name="userEmail">The email address of the related user. Overrides <c>deckId</c> if present</param>
         /// <param name="deckId">The ID of the related deck</param>"
         /// <response code="200">Returns the queried Card objects</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified deck</response>
         /// <response code="404">Object not found with the provided userId, userEmail, or deckId</response>
         [HttpGet]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<CardInfo>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<CardInfo>>> GetCards(string userId, string userEmail, int? deckId)
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<CardInfo>>> GetCards(int? deckId)
         {
-            if (userId is not null)
+            List<CardInfo> cards;
+
+            if (deckId is not null)
             {
-                EchoUser user = await _um.FindByIdAsync(userId);
+                var querydeck = from d in _context.Decks
+                                where d.DeckID == deckId
+                                select d;
 
-                if (user is null) return NotFound("provided userId not found");
+                List<Deck> decks = await querydeck.ToListAsync();
 
-                var queryuserid = from c in _context.Cards
-                                  where c.UserId == userId
-                                  select new CardInfo
-                                  {
-                                      id = c.CardID,
-                                      ftext = c.FrontText,
-                                      btext = c.BackText,
-                                      faud = c.FrontAudio,
-                                      baud = c.BackAudio,
-                                      flang = c.FrontLang.ToString(),
-                                      blang = c.BackLang.ToString(),
-                                      deckId = c.DeckID,
-                                      score = c.Score,
-                                      ownerId = c.UserId,
-                                      date_created = c.DateCreated,
-                                      date_updated = c.DateUpdated,
-                                      date_touched = c.DateTouched
-                                  };
-                return Ok(await queryuserid.ToListAsync());
-            }
+                if (decks.Count == 0)
+                {
+                    return NotFound();
+                }
 
-            if (userEmail is not null)
-            {
-                EchoUser user = await _um.FindByEmailAsync(userEmail);
+                if (decks.First().UserId != _user.Id)
+                {
+                    return Forbid();
+                }
 
-                if (user is null) return NotFound("provided userId not found");
-
-                var queryemail = from c in _context.Cards
-                                 where c.UserId == user.Id
+                var querycards = from c in _context.Cards
+                                 where c.DeckID == deckId
                                  select new CardInfo
                                  {
                                      id = c.CardID,
@@ -148,50 +134,30 @@ namespace echoStudy_webAPI.Controllers
                                      date_updated = c.DateUpdated,
                                      date_touched = c.DateTouched
                                  };
-                return Ok(await queryemail.ToListAsync());
+
+                cards = await querycards.ToListAsync();
+                return Ok(cards);
             }
 
-            if (deckId is not null)
-            {
-                var querydeck = from c in _context.Cards
-                                where c.DeckID == deckId
-                                select new CardInfo
-                                {
-                                    id = c.CardID,
-                                    ftext = c.FrontText,
-                                    btext = c.BackText,
-                                    faud = c.FrontAudio,
-                                    baud = c.BackAudio,
-                                    flang = c.FrontLang.ToString(),
-                                    blang = c.BackLang.ToString(),
-                                    deckId = c.DeckID,
-                                    score = c.Score,
-                                    ownerId = c.UserId,
-                                    date_created = c.DateCreated,
-                                    date_updated = c.DateUpdated,
-                                    date_touched = c.DateTouched
-                                };
-                return Ok(await querydeck.ToListAsync());
-            }
-
-            var queryall = from c in _context.Cards
-                           select new CardInfo
-                           {
-                               id = c.CardID,
-                               ftext = c.FrontText,
-                               btext = c.BackText,
-                               faud = c.FrontAudio,
-                               baud = c.BackAudio,
-                               flang = c.FrontLang.ToString(),
-                               blang = c.BackLang.ToString(),
-                               deckId = c.DeckID,
-                               score = c.Score,
-                               ownerId = c.UserId,
-                               date_created = c.DateCreated,
-                               date_updated = c.DateUpdated,
-                               date_touched = c.DateTouched
-                           };
-            return Ok(await queryall.ToListAsync());
+            var queryuser = from c in _context.Cards
+                            where c.UserId == _user.Id
+                            select new CardInfo
+                            {
+                                id = c.CardID,
+                                ftext = c.FrontText,
+                                btext = c.BackText,
+                                faud = c.FrontAudio,
+                                baud = c.BackAudio,
+                                flang = c.FrontLang.ToString(),
+                                blang = c.BackLang.ToString(),
+                                deckId = c.DeckID,
+                                score = c.Score,
+                                ownerId = c.UserId,
+                                date_created = c.DateCreated,
+                                date_updated = c.DateUpdated,
+                                date_touched = c.DateTouched
+                            };
+            return Ok(await queryuser.ToListAsync());
         }
 
         // GET: /Cards/{id}
@@ -202,11 +168,15 @@ namespace echoStudy_webAPI.Controllers
         /// <param name="id">Card ID</param>
         /// </remarks>
         /// <response code="200">Returns the queried Card object</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object not found with the cardId</response>
         [HttpGet("{id}")]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(CardInfo), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(CardInfo), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<CardInfo>> GetCard(int id)
         {
             var query = from c in _context.Cards
@@ -228,9 +198,16 @@ namespace echoStudy_webAPI.Controllers
                             date_touched = c.DateTouched
                         };
 
-            if (!query.Any())
+            CardInfo card = await query.FirstOrDefaultAsync();
+
+            if (card is null)
             {
                 return NotFound("CardId " + id + " was not found");
+            }
+
+            if (card.ownerId != _user.Id)
+            {
+                return Forbid();
             }
 
             return Ok(await query.FirstAsync());
@@ -282,19 +259,28 @@ namespace echoStudy_webAPI.Controllers
         /// </param>
         /// <response code="200">Returns the Id and DateUpdated of the edited Card</response>
         /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at the cardId provided was not found</response>
         [HttpPost("{id}")]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(CardUpdateResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> PostCardEdit(int id, PostCardInfo cardInfo)
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PostCardEdit(int id, [FromBody] PostCardInfo cardInfo)
         {
             Card card;
             var cardQuery = from c in _context.Cards
                             where c.CardID == id
                             select c;
-            if ((card = cardQuery.First()) is null) return NotFound("Card id " + id + " not found");
+            if ((card = await cardQuery.FirstAsync()) is null) return NotFound("Card id " + id + " not found");
+
+            if(card.UserId != _user.Id)
+            {
+                return Forbid();
+            }
 
             //-------Update according to incoming info
             if (cardInfo.userId is not null)
@@ -412,12 +398,16 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks></remarks>
         /// <response code="201">Returns the id and creation date of the created Card</response>
         /// <response code="400">Invalid input or input type</response>
-        /// <response code="404">Object at userId or deckId provided was not found</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to add a card to the specified deck</response>
+        /// <response code="404">Deck at deckId provided was not found</response>
         [HttpPost]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(CardCreationResponse), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PostCardCreate(PostCardInfo cardInfo)
         {
             if (cardInfo.frontText is null)
@@ -445,12 +435,25 @@ namespace echoStudy_webAPI.Controllers
                 return BadRequest("deckId is required");
             }
 
+            // Get the related deck
+            var deckQuery = from d in _context.Decks
+                            where d.DeckID == cardInfo.deckId
+                            select d;
+            
+            Deck deck = await deckQuery.FirstOrDefaultAsync();
+            if (deck is null)
+            {
+                return NotFound("Deck ID " + cardInfo.deckId + " not found");
+            }
+            if (deck.UserId != _user.Id)
+            {
+                return Forbid();
+            }
+
             // Create a card and assign it all of the basic provided data
             Card card = new Card();
 
-            EchoUser user = await _um.FindByIdAsync(cardInfo.userId);
-            if (user is null) return BadRequest("User " + cardInfo.userId + " not found");
-            card.UserId = user.Id;
+            card.UserId = _user.Id;
 
             card.FrontText = cardInfo.frontText;
             card.BackText = cardInfo.backText;
@@ -502,15 +505,7 @@ namespace echoStudy_webAPI.Controllers
             card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
             card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
 
-            // Get the related deck and update its DateUpdated
-            var deckQuery = from d in _context.Decks
-                            where d.DeckID == cardInfo.deckId
-                            select d;
-            if (!deckQuery.Any())
-            {
-                return NotFound("Deck ID " + cardInfo.deckId + " not found");
-            }
-            Deck deck = deckQuery.First();
+            // update related deck's DateUpdated
             card.Deck = deck;
             deck.DateUpdated = card.DateUpdated;
             _context.Decks.Update(deck);
@@ -540,17 +535,26 @@ namespace echoStudy_webAPI.Controllers
         /// </summary>
         /// <param name="id">The card's ID</param>
         /// <response code="204"></response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at cardId was not found</response>
         [HttpPost("Delete/{id}")]
         [Produces("text/plain")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteCard(int id)
         {
-            var card = await _context.Cards.FindAsync(id);
+            Card card = await _context.Cards.FindAsync(id);
+
             if (card == null)
             {
                 return NotFound();
+            }
+            if (card.UserId != _user.Id)
+            {
+                return Forbid();
             }
 
             _context.Cards.Remove(card);
@@ -644,9 +648,11 @@ namespace echoStudy_webAPI.Controllers
         }
         */
 
+        /*
         private bool CardExists(int id)
         {
             return _context.Cards.Any(e => e.CardID == id);
         }
+        */
     }
 }

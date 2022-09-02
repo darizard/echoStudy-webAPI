@@ -144,9 +144,7 @@ namespace echoStudy_webAPI.Controllers
 
         // GET: /Decks/{id}
         /// <summary>
-        /// Retrieves one Deck specified by Id. Can be used to retrieve a user's own deck or a Public deck.
-        /// NOTE: ALWAYS RETURNS THE ID OF THE OWNER. THIS ID WILL SHOW WHETHER THE AUTHORIZED USER IS THE
-        /// OWNER OR NOT
+        /// Retrieves one Deck specified by Id. Cannot be used to retrieve a public deck. See Public controller.
         /// </summary>
         /// <remarks>
         /// <param name="id">Deck ID</param>
@@ -183,38 +181,20 @@ namespace echoStudy_webAPI.Controllers
                                 date_updated = d.DateUpdated
                             };
 
-            if (!await queryDeck.AnyAsync())
+            var deck = await queryDeck.FirstOrDefaultAsync();
+
+            if(deck is null)
             {
                 return NotFound();
             }
 
-            // then query to see if the deck is accessible to that user
-            // NOTE: ToListAsync() is necessary so we can leverage ToString() in queryDeck above
-            var queryAuth = from d in await queryDeck.ToListAsync() 
-                            where d.ownerId == _user.Id || d.access == Access.Public.ToString()
-                            select new DeckInfo
-                            {
-                                id = d.id,
-                                title = d.title,
-                                description = d.description,
-                                access = d.access,
-                                default_flang = d.default_flang,
-                                default_blang = d.default_blang,
-                                cards = d.cards,
-                                ownerId = d.ownerId,
-                                date_created = d.date_created,
-                                date_touched = d.date_touched,
-                                date_updated = d.date_updated
-                            };
-
-            // NOTE: queryAuth is IEnumerable and not IQueryable now
-            // no async methods necessary or available beyond this point
-            if (!queryAuth.Any()) 
+            // ensure the user is the deck owner
+            if(deck.ownerId != _user.Id)
             {
                 return Forbid();
             }
 
-            return Ok(queryAuth.First());
+            return Ok(deck);
         }
 
         // POST: /Decks/{id}
@@ -249,10 +229,10 @@ namespace echoStudy_webAPI.Controllers
             if((deck = await deckQuery.FirstAsync()) is null) return NotFound("Deck id " + id + " not found");
 
 
-            var authQuery = from d in deckQuery
-                            where d.UserId == _user.Id
-                            select d;
-            if (!await authQuery.AnyAsync()) return Forbid();
+            if (deck.UserId != _user.Id)
+            {
+                return Forbid();
+            }
 
             if (deckInfo.title is not null)
             { 
@@ -277,7 +257,7 @@ namespace echoStudy_webAPI.Controllers
                         deck.Access = Access.Private;
                         break;
                     default:
-                        return BadRequest("Valid access parameters are Public and Private");
+                        return BadRequest("Valid access parameter values are Public and Private");
                 }
             }
             
@@ -516,23 +496,20 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized for this action</response>
         /// <response code="404">Object at userId was not found</response>
         [HttpPost("Delete")]
-        [Produces("text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteUserDecks(string userId)
         {
-            EchoUser user = await _um.FindByIdAsync(userId);
-            if (user is null) return NotFound("UserId " + userId + " was not found");
-
             if(userId != _user.Id)
             {
                 return Forbid();
             }
 
             var query = from d in _context.Decks
-                        where d.UserId == user.Id
+                        where d.UserId == _user.Id
                         select d;
 
             List<Deck> userDecks = await query.ToListAsync();
