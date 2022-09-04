@@ -1,7 +1,8 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -13,10 +14,16 @@ namespace echoStudy_webAPI.Tests
     public class CardsAPITester
     {
         public HttpClient client;
-        public string johnDoeId;
 
         // Determines whether localhost or api.echostudy.com is tested
         public bool testDevelopment = true;
+
+        // Token for the user to be tested
+        public bool userTokenSet;
+
+        // The user's id
+        public string userId;
+
 
         public CardsAPITester()
         {
@@ -39,146 +46,100 @@ namespace echoStudy_webAPI.Tests
                 client.BaseAddress = new Uri("http://api.echostudy.com/");
             }
 
-            client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
-            johnDoeId = getJohnDoeUserId().Result;
         }
 
         /**
-        * Gets all cards, should not be empty
+        * Tests the GET Cards endpoint with all possible types of requests and validates the responses
         */
         [TestMethod]
-        public async Task GetCards()
+        public async Task GetCardsTest()
         {
+            // Ensure John's token is set for the client first
+            if (!userTokenSet)
+            {
+                await GrabJohnToken();
+                await grabUserId();
+            }
+
+            // TEST 1: Get all of John's cards
+            int total = 0;
             HttpResponseMessage response = await client.GetAsync("Cards");
-
             if (response.IsSuccessStatusCode)
             {
                 var contents = await response.Content.ReadAsStringAsync();
-                List<CardInfo> cards = JsonConvert.DeserializeObject<List<CardInfo>>(contents);
-                Assert.AreNotEqual(0, cards.Count);
+                List<CardInfo> allCards = JsonConvert.DeserializeObject<List<CardInfo>>(contents);
+                Assert.AreNotEqual(0, allCards.Count);
+                total = allCards.Count;
             }
             else
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request failed when trying to get all of John's cards");
             }
-        }
 
-        /**
-         * Gets all cards related to deck id 1, should not be empty
-         */
-        [TestMethod]
-        public async Task GetCardsByValidDeckId()
-        {
-            HttpResponseMessage response = await client.GetAsync("Cards?deckId=1");
-
+            // TEST 2: Get one of John's decks by ID
+            response = await client.GetAsync("Cards?deckId=1");
             if (response.IsSuccessStatusCode)
             {
                 var contents = await response.Content.ReadAsStringAsync();
-                List<CardInfo> cards = JsonConvert.DeserializeObject<List<CardInfo>>(contents);
-                Assert.AreNotEqual(0, cards.Count);
+                List<CardInfo> deckCards = JsonConvert.DeserializeObject<List<CardInfo>>(contents);
+                Assert.AreNotEqual(0, deckCards.Count);
+                if(deckCards.Count >= total)
+                {
+                    Assert.Fail("TEST 2: Grabbing deck by ID produces same result as no parameter");
+                }
             }
             else
             {
-                Assert.Fail();
+                Assert.Fail("TEST 2: Request failed when trying to get one of John's deck's cards ");
             }
-        }
 
-        /**
-        * Gets all cards related to an invalid deck id, should be empty
-        */
-        [TestMethod]
-        public async Task GetCardsByInvalidDeckId()
-        {
-            HttpResponseMessage response = await client.GetAsync("Cards?deckId=-1");
+            // TEST 3: Get a deck that can't be found
+            response = await client.GetAsync("Cards?deckId=-1");
 
             if (response.IsSuccessStatusCode)
             {
-                var contents = await response.Content.ReadAsStringAsync();
-                List<CardInfo> cards = JsonConvert.DeserializeObject<List<CardInfo>>(contents);
-                Assert.AreEqual(0, cards.Count);
+                Assert.Fail("TEST 3: Success for a nonexistent deck ID");
             }
             else
             {
-                Assert.Fail();
+                if(response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    Assert.Fail("TEST 3: Status code for non existent deck wasn't NotFound");
+                }
             }
-        }
 
-        /**
-        * Gets all cards related to the email johndoe@gmail.com, should not be empty
-        */
-        [TestMethod]
-        public async Task GetCardsByValidUserEmail()
-        {
-            HttpResponseMessage response = await client.GetAsync("Cards?userEmail=JohnDoe@gmail.com");
+            // TEST 4: Get a deck that isn't John's
+            response = await client.GetAsync("Cards?deckId=4");
 
             if (response.IsSuccessStatusCode)
             {
-                var contents = await response.Content.ReadAsStringAsync();
-                List<CardInfo> cards = JsonConvert.DeserializeObject<List<CardInfo>>(contents);
-                Assert.AreNotEqual(0, cards.Count);
+                Assert.Fail("TEST 3: Success for deck John doesn't own");
             }
             else
             {
-                Assert.Fail();
+                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+                {
+                    Assert.Fail("TEST 3: Status code for a deck John doesn't own wasn't Forbidden");
+                }
             }
         }
 
         /**
-        * Gets all cards related to a nonexistent user, should be empty
+        * Tests the GET Cards/{id} endpoint with all possible types of requests and validates the responses
         */
         [TestMethod]
-        public async Task GetCardsByInvalidUserEmail()
+        public async Task GetCardsIdTest()
         {
-            HttpResponseMessage response = await client.GetAsync("Cards?userEmail=notreal@gmail.com");
-
-            if (response.IsSuccessStatusCode)
+            // Ensure John's token is set for the client first
+            if (!userTokenSet)
             {
-                Assert.Fail();
+                await GrabJohnToken();
+                await grabUserId();
             }
-        }
 
-        /**
-        * Gets all cards related to the id related to johndoe@gmail.com, should not be empty
-        */
-        [TestMethod]
-        public async Task GetCardsByValidUserId()
-        {
-            HttpResponseMessage response = await client.GetAsync("Cards?userId=" + johnDoeId);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var contents = await response.Content.ReadAsStringAsync();
-                List<CardInfo> cards = JsonConvert.DeserializeObject<List<CardInfo>>(contents);
-                Assert.AreNotEqual(0, cards.Count);
-            }
-            else
-            {
-                Assert.Fail();
-            }
-        }
-
-        /**
-        * Gets all cards related to a bogus id, should be empty
-        */
-        [TestMethod]
-        public async Task GetCardsByInvalidUserId()
-        {
-            HttpResponseMessage response = await client.GetAsync("Cards?userId=1234567890");
-
-            if (response.IsSuccessStatusCode)
-            {
-                Assert.Fail();
-            }
-        }
-
-        /**
-        * Gets a card with the id of 1, should succeed and parse
-        */
-        [TestMethod]
-        public async Task GetCardByValidId()
-        {
+            // TEST 1: Get a card that belongs to John
             HttpResponseMessage response = await client.GetAsync("Cards/1");
 
             if (response.IsSuccessStatusCode)
@@ -188,111 +149,260 @@ namespace echoStudy_webAPI.Tests
             }
             else
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request failed for a valid card");
             }
-        }
 
-        /**
-        * Gets a card with a bogus ID, should not succeed
-        */
-        [TestMethod]
-        public async Task GetCardByInvalidId()
-        {
-            HttpResponseMessage response = await client.GetAsync("Cards/-1");
+            // TEST 2: Get a card that doesn't exist
+            response = await client.GetAsync("Cards/-1");
 
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 2: Request succeeded for a nonexistent card");
+            }
+            else
+            {
+                if(response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    Assert.Fail("TEST 2: Status code for a card that doesn't exist wasn't NotFound");
+                }
+            }
+
+            // TEST 3: Get a card that doesn't belong to John
+            response = await client.GetAsync("Cards/600");
+
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 2: Request succeeded for a card John doesn't own");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+                {
+                    Assert.Fail("TEST 2: Status code for a card that doesn't belong to John wasn't Forbidden");
+                }
+            }
+        }
+
+
+        /**
+         * Tests the POST Cards/Delete/{id} endpoint with all possible types of requests and validates the responses
+         */
+        [TestMethod]
+        public async Task PostCardsDeleteTest()
+        {
+            // Ensure John's token is set for the client first
+            if (!userTokenSet)
+            {
+                await GrabJohnToken();
+                await grabUserId();
+            }
+
+            // TEST 1: Attempts to delete a card that doesn't exist
+            HttpResponseMessage response = await client.PostAsync("Cards/Delete/600", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 1: Request succeeded for a card that doesn't exist");
+            }
+            /*
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    Assert.Fail("TEST 2: Status code for a card that doesn't exist wasn't NotFound");
+                }
+            }
+            */
+
+            // TEST 2: Attempts to delete a card that John doesn't own
+            response = await client.GetAsync("Cards/Delete/600");
+
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 2: Request succeeded for deleting a card John doesn't own");
+            }
+            /*
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+                {
+                    Assert.Fail("TEST 2: Status code for a card that doesn't exist wasn't Forbidden");
+                }
+            }
+            */
+
+            // TEST 3: Create a card and then delete it and then ensure it's actually deleted
+            PostCardInfo cardInfo = new PostCardInfo();
+            await populateCard(cardInfo);
+            response = await client.PostAsync("Cards", createContent(cardInfo));
+
+            if (response.IsSuccessStatusCode)
+            {
+                var contents = await response.Content.ReadAsStringAsync();
+                CreatedResponse createdResponse = JsonConvert.DeserializeObject<CreatedResponse>(contents);
+                response = await client.PostAsync("Cards/Delete/" + createdResponse.id, null);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Assert.Fail("TEST 3: Request failed to delete a valid card");
+                }
+            }
+            else
+            {
+                Assert.Fail("TEST 3: Request failed to create a card");
             }
         }
 
         /**
-        * Attempts to create invalid cards through missing fields and bogus IDs
+        * Tests the POST Cards endpoint with every type of request possible and validates the responses
         */
         [TestMethod]
-        public async Task CreateInvalidCards()
+        public async Task PostCardsCreateTest()
         {
+            // Ensure John's token is set for the client first
+            if (!userTokenSet)
+            {
+                await GrabJohnToken();
+                await grabUserId();
+            }
+
+            // TEST 1: Attempt to create cards with various bogus values
             PostCardInfo cardInfo = new PostCardInfo();
 
             // no backlang
-            populateCard(cardInfo);
+            await populateCard(cardInfo);
             cardInfo.backLang = null;
             HttpResponseMessage response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with empty backLang");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("TEST 1: Status code was not BadRequest for missing parameters");
+                }
             }
 
             // no frontlang
-            populateCard(cardInfo);
+            await populateCard(cardInfo);
             cardInfo.frontLang = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with empty frontLang");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("TEST 1: Status code was not BadRequest for missing parameters");
+                }
             }
 
             // no fronttext
-            populateCard(cardInfo);
+            await populateCard(cardInfo);
             cardInfo.frontText = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with empty frontText");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("TEST 1: Status code was not BadRequest for missing parameters");
+                }
             }
 
             // no backtext
-            populateCard(cardInfo);
+            await populateCard(cardInfo);
             cardInfo.backText = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with empty backText");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("TEST 1: Status code was not BadRequest for missing parameters");
+                }
             }
 
             // no deckid
-            populateCard(cardInfo);
+            await populateCard(cardInfo);
             cardInfo.deckId = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with empty deckId");
             }
 
             // no userid
-            populateCard(cardInfo);
+            await populateCard(cardInfo);
             cardInfo.userId = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with empty userId");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("TEST 1: Status code was not BadRequest for missing parameters");
+                }
             }
 
             // bogus deckId
-            populateCard(cardInfo);
+            await populateCard(cardInfo);
             cardInfo.deckId = -1;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with invalid deckId");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    Assert.Fail("TEST 1: Status code was not NotFound for a bad deckId");
+                }
             }
 
             // bogus userId
-            populateCard(cardInfo);
+            /*
+            await populateCard(cardInfo);
             cardInfo.userId = "123456789";
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded with invalid userId");
             }
-        }
+            */
 
-        [TestMethod]
-        public async Task CreateValidCard()
-        {
-            PostCardInfo cardInfo = new PostCardInfo();
-            populateCard(cardInfo);
-            HttpResponseMessage response = await client.PostAsync("Cards", createContent(cardInfo));
+            // Access a deck John doesn't own
+            await populateCard(cardInfo);
+            cardInfo.deckId = 5;
+            response = await client.PostAsync("Cards", createContent(cardInfo));
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 1: Request succeeded with another user's deckId");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+                {
+                    Assert.Fail("TEST 1: Status code was not Forbidden for creating a card in someone else's deck");
+                }
+            }
+
+            // TEST 2: Create valid cards
+            await populateCard(cardInfo);
+            response = await client.PostAsync("Cards", createContent(cardInfo));
 
             if (response.IsSuccessStatusCode)
             {
@@ -306,7 +416,7 @@ namespace echoStudy_webAPI.Tests
                     CardInfo card = JsonConvert.DeserializeObject<CardInfo>(contents);
 
                     // Ensure everything is right
-                    Assert.AreEqual(johnDoeId, card.ownerId);
+                    Assert.AreEqual(this.userId, card.ownerId);
                     Assert.AreEqual(cardInfo.deckId, card.deckId);
                     Assert.AreEqual(cardInfo.frontText, card.ftext);
                     Assert.AreEqual(cardInfo.backText, card.btext);
@@ -317,80 +427,76 @@ namespace echoStudy_webAPI.Tests
                     response = await client.PostAsync("Cards/Delete/" + createdResponse.id, null);
                     if (!response.IsSuccessStatusCode)
                     {
-                        Assert.Fail();
+                        Assert.Fail("TEST 2: Request failed to delete card that was created");
                     }
                 }
                 else
                 {
-                    Assert.Fail();
+                    Assert.Fail("TEST 2: Request failed to get created card");
                 }
             }
             else
             {
-                Assert.Fail();
+                Assert.Fail("TEST 2: Request failed to create card");
             }
         }
 
         /**
-        * Edits a card with a bogus ID, should not succeed
+        * Tests POST Cards/{id} endpoint with every possible request and validates the responses
         */
         [TestMethod]
-        public async Task EditCardWithInvalidId()
+        public async Task PostEditCardsTest()
         {
-            // Card
+            // Ensure John's token is set for the client first
+            if (!userTokenSet)
+            {
+                await GrabJohnToken();
+                await grabUserId();
+            }
+
+            // TEST 1: Edit a card with an invalid id
             PostCardInfo cardInfo = new PostCardInfo();
             HttpResponseMessage response = await client.PostAsync("Cards/-1", createContent(cardInfo));
-
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded for a nonexistent card");
             }
-        }
 
-        /**
-        * Edits a card with a bogus deck ID, should not succeed
-        */
-        [TestMethod]
-        public async Task EditCardWithInvalidDeckId()
-        {
+            // TEST 2: Edit a card with an invalid deckId
             // Card
-            PostCardInfo cardInfo = new PostCardInfo();
-            populateCard(cardInfo);
+            cardInfo = new PostCardInfo();
+            await populateCard(cardInfo);
             cardInfo.deckId = -1;
-            HttpResponseMessage response = await client.PostAsync("Cards/1", createContent(cardInfo));
-
+            response = await client.PostAsync("Cards/1", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded for a nonexistent deckId");
             }
-        }
 
-        /**
-        * Edits a card with a bogus owner ID, should not succeed
-        */
-        [TestMethod]
-        public async Task EditCardWithInvalidOwnerId()
-        {
+            // TEST 3: Edit a card with an invalid userId
             // Card
-            PostCardInfo cardInfo = new PostCardInfo();
-            populateCard(cardInfo);
+            cardInfo = new PostCardInfo();
+            await populateCard(cardInfo);
             cardInfo.userId = "1234567890";
-            HttpResponseMessage response = await client.PostAsync("Cards/1", createContent(cardInfo));
-
+            response = await client.PostAsync("Cards/1", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail();
+                Assert.Fail("TEST 1: Request succeeded for a bogus userId");
             }
-        }
 
-        /**
-        * Edits a card with a valid info, should succeed
-        */
-        [TestMethod]
-        public async Task EditCardValid()
-        {
+            // TEST 4: Edit a card that someone else owns
+            // Card
+            cardInfo = new PostCardInfo();
+            await populateCard(cardInfo);
+            response = await client.PostAsync("Cards/600", createContent(cardInfo));
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 1: Request succeeded for a bogus userId");
+            }
+
+            // TEST 5: Edit a valid card
             // First, store the old info
-            HttpResponseMessage response = await client.GetAsync("Cards/1");
+            response = await client.GetAsync("Cards/1");
             CardInfo oldCard = new CardInfo();
             if (response.IsSuccessStatusCode)
             {
@@ -399,12 +505,12 @@ namespace echoStudy_webAPI.Tests
             }
             else
             {
-                Assert.Fail();
+                Assert.Fail("TEST 5: Failed to grab a card that should exist");
             }
 
             // Card
-            PostCardInfo cardInfo = new PostCardInfo();
-            populateCard(cardInfo);
+            cardInfo = new PostCardInfo();
+            await populateCard(cardInfo);
             response = await client.PostAsync("Cards/1", createContent(cardInfo));
 
             if (response.IsSuccessStatusCode)
@@ -419,7 +525,7 @@ namespace echoStudy_webAPI.Tests
                     CardInfo card = JsonConvert.DeserializeObject<CardInfo>(contents);
 
                     // Ensure everything is right
-                    Assert.AreEqual(johnDoeId, card.ownerId);
+                    Assert.AreEqual(this.userId, card.ownerId);
                     Assert.AreEqual(cardInfo.deckId, card.deckId);
                     Assert.AreEqual(cardInfo.frontText, card.ftext);
                     Assert.AreEqual(cardInfo.backText, card.btext);
@@ -436,71 +542,51 @@ namespace echoStudy_webAPI.Tests
                     response = await client.PostAsync("Cards/1", createContent(cardInfo));
                     if (!response.IsSuccessStatusCode)
                     {
-                        Assert.Fail();
+                        Assert.Fail("TEST 5: Request failed to restore the old card after editing");
                     }
                 }
                 else
                 {
-                    Assert.Fail();
+                    Assert.Fail("TEST 5: Request failed to get the edited card");
                 }
             }
             else
             {
-                Assert.Fail();
-            }
-        }
-
-        /**
-        * Deletes a card with a bogus ID, should not succeed
-        */
-        [TestMethod]
-        public async Task DeleteCardByInvalidId()
-        {
-            HttpResponseMessage response = await client.PostAsync("Cards/Delete/-1", null);
-
-            if (response.IsSuccessStatusCode)
-            {
-                Assert.Fail();
-            }
-        }
-
-        /**
-        * Creates and deletes a card
-        */
-        [TestMethod]
-        public async Task DeleteCardByValidId()
-        {
-            PostCardInfo cardInfo = new PostCardInfo();
-            populateCard(cardInfo);
-            HttpResponseMessage response = await client.PostAsync("Cards", createContent(cardInfo));
-
-            if (response.IsSuccessStatusCode)
-            {
-                var contents = await response.Content.ReadAsStringAsync();
-                CreatedResponse createdResponse = JsonConvert.DeserializeObject<CreatedResponse>(contents);
-                response = await client.PostAsync("Cards/Delete/" + createdResponse.id, null);
-                if (!response.IsSuccessStatusCode)
-                {
-                    Assert.Fail();
-                }
-            }
-            else
-            {
-                Assert.Fail();
+                Assert.Fail("TEST 5: Request failed to edit a card");
             }
         }
 
         /**
          * Populates given card info
          */
-        private void populateCard(PostCardInfo cardInfo)
+        private async Task populateCard(PostCardInfo cardInfo)
         {
             cardInfo.frontText = "To dance";
             cardInfo.backText = "tanzen";
             cardInfo.frontLang = "English";
             cardInfo.backLang = "German";
-            cardInfo.userId = johnDoeId;
+            cardInfo.userId = this.userId;
             cardInfo.deckId = 1;
+        }
+
+        /**
+         * Grabs the user ID from the JWT token
+         */
+        private async Task grabUserId()
+        {
+            // TEST 1: Get a card that belongs to John
+            HttpResponseMessage response = await client.GetAsync("Cards/1");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var contents = await response.Content.ReadAsStringAsync();
+                CardInfo card = JsonConvert.DeserializeObject<CardInfo>(contents);
+                this.userId = card.ownerId;
+            }
+            else
+            {
+                throw new Exception();
+            }
         }
 
         /**
@@ -516,23 +602,38 @@ namespace echoStudy_webAPI.Tests
         }
 
         /**
-         * Returns user id associasted with JohnDoe@gmail.com
+        * Gets John's token, should not be empty
          */
-        public async Task<string> getJohnDoeUserId()
+        public async Task GrabJohnToken()
         {
-            // First seeded card belongs to the user JohnDoe@gmail.com
-            HttpResponseMessage response = await client.GetAsync("Cards/1");
+            // The user
+            UserInfo userDetails = new UserInfo();
+            userDetails.username = "JohnDoe@gmail.com";
+            userDetails.password = "123ABC!@#def";
 
+            // Get the token from the server
+            HttpContent signInContent = new StringContent(JsonConvert.SerializeObject(userDetails), Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await client.PostAsync("authenticate", signInContent);
+
+            // Parse and set the authorization header in the client
             if (response.IsSuccessStatusCode)
             {
-                var contents = await response.Content.ReadAsStringAsync();
-                CardInfo card = JsonConvert.DeserializeObject<CardInfo>(contents);
-                return card.ownerId;
+                client.DefaultRequestHeaders.Authorization =
+    new AuthenticationHeaderValue("Bearer", JsonConvert.DeserializeObject<string>(await response.Content.ReadAsStringAsync()));
+                userTokenSet = true;
+                return;
             }
-            else
-            {
-                throw new AssertFailedException("Query for John Doe ID failed");
-            }
+
+            throw new Exception("Unable to retrieve John's token");
+        }
+
+        /**
+         * User Info
+         */
+        public class UserInfo
+        {
+            public string username;
+            public string password;
         }
 
         /**
