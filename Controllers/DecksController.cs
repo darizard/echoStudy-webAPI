@@ -9,22 +9,19 @@ using echoStudy_webAPI.Models;
 using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace echoStudy_webAPI.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class DecksController : ControllerBase
+    public class DecksController : EchoUserControllerBase
     {
         private readonly EchoStudyDB _context;
-        private readonly UserManager<EchoUser> _userManager;
 
-        public DecksController(EchoStudyDB context, UserManager<EchoUser> userManager)
+        public DecksController(EchoStudyDB context, UserManager<EchoUser> um)
+            : base(um)
         {
             _context = context;
-            _userManager = userManager;
         }
 
         /**
@@ -80,73 +77,21 @@ namespace echoStudy_webAPI.Controllers
 
         // GET: /Decks
         /// <summary>
-        /// Retrieves all Deck objects or deck objects related to a user by Id or by Email
+        /// Retrieves all Deck objects belonging to the authenticated user
         /// </summary>
-        /// <remarks>If no parameter is specified, returns all deck objects.
-        /// If userId or userEmail is specified, returns the decks related to the given user. If
-        /// both parameters are specified, userId takes precedence.
+        /// <remarks>
+        /// User authentication is encoded in the JSON Web Token provided in the Authorization header
         /// </remarks>
-        /// <param name="userId">The ASP.NET Id of the related user. Overrides <c>userEmail</c> if present</param>
-        /// <param name="userEmail">The email address of the related user</param>
-        /// <response code="200">Returns the queried Deck objects</response>
-        /// <response code="404">User not found with the provided Id or Email</response>
+        /// <response code="200">Returns the user's Deck objects</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
         [HttpGet]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks(string userId, string userEmail)
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks()
         {
-            if(userId != null)
-            {
-                EchoUser user = await _userManager.FindByIdAsync(userId);
-
-                if (user is null) return NotFound("provided userId not found");
-
-                var queryid = from d in _context.Decks
-                            where d.UserId == user.Id
-                            select new DeckInfo
-                            {
-                                id = d.DeckID,
-                                title = d.Title,
-                                description = d.Description,
-                                access = d.Access.ToString(),
-                                default_flang = d.DefaultFrontLang.ToString(),
-                                default_blang = d.DefaultBackLang.ToString(),
-                                cards = d.Cards.Select(c => c.CardID).ToList(),
-                                ownerId = d.UserId,
-                                date_created = d.DateCreated,
-                                date_touched = d.DateTouched,
-                                date_updated = d.DateUpdated
-                            };
-                return Ok(await queryid.ToListAsync());
-            }
-
-            if(userEmail != null)
-            {
-                EchoUser user = await _userManager.FindByEmailAsync(userEmail);
-
-                if (user is null) return NotFound("provided userEmail not found");
-
-                var queryemail = from d in _context.Decks
-                              where d.UserId == user.Id
-                              select new DeckInfo
-                              {
-                                  id = d.DeckID,
-                                  title = d.Title,
-                                  description = d.Description,
-                                  access = d.Access.ToString(),
-                                  default_flang = d.DefaultFrontLang.ToString(),
-                                  default_blang = d.DefaultBackLang.ToString(),
-                                  cards = d.Cards.Select(c => c.CardID).ToList(),
-                                  ownerId = d.UserId,
-                                  date_created = d.DateCreated,
-                                  date_touched = d.DateTouched,
-                                  date_updated = d.DateUpdated
-                              };
-                return Ok(await queryemail.ToListAsync());
-            }
-
-            var queryall = from d in _context.Decks
+            var query = from d in _context.Decks
+                        where d.UserId == _user.Id
                         select new DeckInfo
                         {
                             id = d.DeckID,
@@ -161,9 +106,10 @@ namespace echoStudy_webAPI.Controllers
                             date_touched = d.DateTouched,
                             date_updated = d.DateUpdated
                         };
-            return Ok(await queryall.ToListAsync());
+            return Ok(await query.ToListAsync());
         }
 
+        // ******TODO: Does not depend at all on current user. Move to a "Public" controller?
         // GET: /Decks/Public
         /// <summary>
         /// Retrieves Public Decks
@@ -198,47 +144,62 @@ namespace echoStudy_webAPI.Controllers
 
         // GET: /Decks/{id}
         /// <summary>
-        /// Retrieves one Deck specified by Id
+        /// Retrieves one Deck specified by Id. Cannot be used to retrieve a public deck. See Public controller.
         /// </summary>
         /// <remarks>
         /// <param name="id">Deck ID</param>
         /// </remarks>
         /// <response code="200">Returns the queried Deck object</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access this deck</response>
         /// <response code="404">Deck object with the given id was not found</response>
         [HttpGet("{id}")]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(Deck), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<DeckInfo>> GetDeck(int id)
         {
-            var query = from d in _context.Decks
-                        where d.DeckID == id
-                        select new DeckInfo
-                        {
-                            id = d.DeckID,
-                            title = d.Title,
-                            description = d.Description,
-                            access = d.Access.ToString(),
-                            default_flang = d.DefaultFrontLang.ToString(),
-                            default_blang = d.DefaultBackLang.ToString(),
-                            cards = d.Cards.Select(c => c.CardID).ToList(),
-                            ownerId = d.UserId,
-                            date_created = d.DateCreated,
-                            date_touched = d.DateTouched,
-                            date_updated = d.DateUpdated
-                        };
+            // d.DeckID is unique; queryDeck returns only one deck
 
-            if (!query.Any())
+            // first query to see if the desired deck exists
+            var queryDeck = from d in _context.Decks
+                            where d.DeckID == id
+                            select new DeckInfo
+                            {
+                                id = d.DeckID,
+                                title = d.Title,
+                                description = d.Description,
+                                access = d.Access.ToString(),
+                                default_flang = d.DefaultFrontLang.ToString(),
+                                default_blang = d.DefaultBackLang.ToString(),
+                                cards = d.Cards.Select(c => c.CardID).ToList(),
+                                ownerId = d.UserId,
+                                date_created = d.DateCreated,
+                                date_touched = d.DateTouched,
+                                date_updated = d.DateUpdated
+                            };
+
+            var deck = await queryDeck.FirstOrDefaultAsync();
+
+            if(deck is null)
             {
-                return NotFound("DeckId " + id + " was not found");
+                return NotFound();
             }
 
-            return Ok(await query.FirstAsync());
+            // ensure the user is the deck owner
+            if(deck.ownerId != _user.Id)
+            {
+                return Forbid();
+            }
+
+            return Ok(deck);
         }
 
         // POST: /Decks/{id}
         /// <summary>
-        /// Edits an existing Deck
+        /// Edits an existing Deck owned by the authenticated user
         /// </summary>
         /// <remarks>
         /// Currently does not support changing its associated cards
@@ -249,19 +210,29 @@ namespace echoStudy_webAPI.Controllers
         /// </param>
         /// <response code="200">Returns the Id and DateUpdated of the edited Deck</response>
         /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to edit this deck</response>
         /// <response code="404">Object at the deckId provided was not found</response>
         [HttpPost("{id}")]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(DeckUpdateResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PostDeckEdit(int id, PostDeckInfo deckInfo)
         {
             Deck deck;
             var deckQuery = from d in _context.Decks
                             where d.DeckID == id
                             select d;
-            if((deck = deckQuery.First()) is null) return NotFound("Deck id " + id + " not found");
+            if((deck = await deckQuery.FirstAsync()) is null) return NotFound("Deck id " + id + " not found");
+
+
+            if (deck.UserId != _user.Id)
+            {
+                return Forbid();
+            }
 
             if (deckInfo.title is not null)
             { 
@@ -286,7 +257,7 @@ namespace echoStudy_webAPI.Controllers
                         deck.Access = Access.Private;
                         break;
                     default:
-                        return BadRequest("Valid access parameters are Public and Private");
+                        return BadRequest("Valid access parameter values are Public and Private");
                 }
             }
             
@@ -333,14 +304,8 @@ namespace echoStudy_webAPI.Controllers
             }
 
             // Owner
-            if(deckInfo.userId is not null)
-            {
-                EchoUser user = await _userManager.FindByIdAsync(deckInfo.userId);
-                if (user is null) return NotFound("User " + deckInfo.userId + " not found");
-
-                deck.UserId = user.Id;
-            }
-
+            deck.UserId = _user.Id;
+            
             // Dates
             deck.DateUpdated = DateTime.Now;
 
@@ -357,7 +322,7 @@ namespace echoStudy_webAPI.Controllers
 
         // POST: api/Decks
         /// <summary>
-        /// Creates a Deck for a specific user
+        /// Creates a Deck for the currently authenticated user
         /// </summary>
         /// <param name="deckInfo">
         /// Required: title, description, default_flang, default_blang, userId -- Optional: access, cardIds
@@ -365,12 +330,14 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks>Default access level is Private. The cardIds list currently does nothing.</remarks>
         /// <response code="201">Returns the id and creation date of the created Deck</response>
         /// <response code="400">Invalid input or input type</response>
-        /// <response code="404">Object at userId or cardId provided was not found</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="404">Object at cardId provided was not found</response>
         [HttpPost]
-        [Produces("application/json", "text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(typeof(DeckCreationResponse), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PostDeckCreate(PostDeckInfo deckInfo)
         {
             // Create and populate a deck with the given info
@@ -392,15 +359,9 @@ namespace echoStudy_webAPI.Controllers
             {
                 return BadRequest("a non-empty default_blang is required");
             }
-            if(String.IsNullOrEmpty(deckInfo.userId))
-            {
-                return BadRequest("a non-empty userId is required");
-            }
 
-            // Ensure Owner exists and add it
-            EchoUser user = await _userManager.FindByIdAsync(deckInfo.userId);
-            if (user is null) { return BadRequest("User " + deckInfo.userId + " not found"); }
-            deck.UserId = user.Id;
+            // Add owner
+            deck.UserId = _user.Id;
 
             /*
             IQueryable<dynamic> querycards;
@@ -493,21 +454,30 @@ namespace echoStudy_webAPI.Controllers
 
         // DELETE: /Decks/Delete/{id}
         /// <summary>
-        /// Deletes one specific deck
+        /// Deletes one specific deck owned by the currently authenticated user
         /// </summary>
         /// <param name="id">The deck's ID</param>
         /// <response code="204"></response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized for this action</response>
         /// <response code="404">Object at deckId was not found</response>
         [HttpPost("Delete/{id}")]
         [Produces("text/plain")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteDeck(int id)
         {
             var deck = await _context.Decks.FindAsync(id);
             if (deck == null)
             {
                 return NotFound("DeckId " + id + " was not found");
+            }
+
+            if(deck.UserId != _user.Id)
+            {
+                return Forbid();
             }
 
             _context.Decks.Remove(deck);
@@ -522,18 +492,24 @@ namespace echoStudy_webAPI.Controllers
         /// </summary>
         /// <param name="userId">The user's ID</param>
         /// <response code="204"></response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized for this action</response>
         /// <response code="404">Object at userId was not found</response>
         [HttpPost("Delete")]
-        [Produces("text/plain")]
+        [Produces("application/json")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteUserDecks(string userId)
         {
-            EchoUser user = await _userManager.FindByIdAsync(userId);
-            if (user is null) return NotFound("UserId " + userId + " was not found");
+            if(userId != _user.Id)
+            {
+                return Forbid();
+            }
 
             var query = from d in _context.Decks
-                        where d.UserId == user.Id
+                        where d.UserId == _user.Id
                         select d;
 
             List<Deck> userDecks = await query.ToListAsync();
@@ -545,11 +521,6 @@ namespace echoStudy_webAPI.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool DeckExists(int id)
-        {
-            return _context.Decks.Any(e => e.DeckID == id);
         }
     }
 }
