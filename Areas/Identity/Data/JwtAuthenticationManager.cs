@@ -146,13 +146,20 @@ namespace echoStudy_webAPI.Data
             return await AuthenticateUserAsync(user);
         }
 
-        private ClaimsPrincipal GetPrincipalFromToken(string accessToken)
+        private ClaimsPrincipal GetPrincipalFromToken(string accessToken, bool allowExpired = true)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             try
             {
+                var validationParams = _tokenValidationParameters;
+                if (allowExpired)
+                {
+                    validationParams = validationParams.Clone();
+                    validationParams.ValidateLifetime = false;  // ignore token expiration
+                }
+
                 var principal = tokenHandler.ValidateToken
-                    (accessToken, _tokenValidationParameters, out var validatedToken);
+                    (accessToken, validationParams, out var validatedToken);
                 if (!IsJwtWithValidSecurityAlgorithm(validatedToken))
                 {
                     return null;
@@ -163,7 +170,6 @@ namespace echoStudy_webAPI.Data
             {
                 return null;
             }
-
         }
 
         private bool IsJwtWithValidSecurityAlgorithm(SecurityToken validatedToken)
