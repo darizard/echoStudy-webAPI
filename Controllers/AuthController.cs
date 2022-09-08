@@ -9,6 +9,8 @@ using echoStudy_webAPI.Data;
 using System.Threading.Tasks;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -19,20 +21,14 @@ namespace echoStudy_webAPI.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly EchoStudyDB _context_EchoStudyDB;
-        private readonly IConfiguration _configuration;
         private static UserManager<EchoUser> _um;
         private readonly IJwtAuthenticationManager _jwtManager;
         
-        public AuthController(EchoStudyDB echoStudyDB, IConfiguration configuration,
-                              UserManager<EchoUser> um,
+        public AuthController(UserManager<EchoUser> um,
                               IJwtAuthenticationManager jwtManager)
         {
-            _context_EchoStudyDB = echoStudyDB;
-            _configuration = configuration;
             _um = um;
             _jwtManager = jwtManager;
-            
         }
 
         // POST: /Authenticate
@@ -73,8 +69,8 @@ namespace echoStudy_webAPI.Controllers
                 return Unauthorized();
             }
 
-            var token = _jwtManager.Authenticate(user);
-            return Ok(token);
+            var authResponse = await _jwtManager.AuthenticateUserAsync(user);
+            return Ok(authResponse);
         }
 
         // GET: /Authenticate
@@ -92,6 +88,20 @@ namespace echoStudy_webAPI.Controllers
             var token = new JwtSecurityToken(encodedToken);
 
             return token.ToString();
+        }
+
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+        {
+            var response = await _jwtManager.RefreshTokenAsync(request.Token, request.RefreshToken);
+
+            if(response == null)
+            {
+                return BadRequest();
+            }
+
+            return Ok(response);
         }
     }
 }

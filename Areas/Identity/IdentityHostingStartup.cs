@@ -1,6 +1,7 @@
 ﻿using System;
 using echoStudy_webAPI.Areas.Identity.Data;
 using echoStudy_webAPI.Data;
+using echoStudy_webAPI.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
@@ -15,8 +16,9 @@ namespace echoStudy_webAPI.Areas.Identity
     {
         public void Configure(IWebHostBuilder builder)
         {
+            
             builder.ConfigureServices((context, services) => {
-                services.AddDbContext<EchoStudyUsersRolesDB>(options =>
+                services.AddDbContext<EchoStudyDB>(options =>
                     options.UseSqlServer(
                         context.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -24,10 +26,9 @@ namespace echoStudy_webAPI.Areas.Identity
                 .AddRoles<IdentityRole>()
                 .AddDefaultTokenProviders()
                 .AddSignInManager<SignInManager<EchoUser>>()
-                .AddEntityFrameworkStores<EchoStudyUsersRolesDB>();
-
-                services.AddMvc();
+                .AddEntityFrameworkStores<EchoStudyDB>();
             });
+            
         }
     }
 }
