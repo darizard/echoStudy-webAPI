@@ -34,7 +34,7 @@ namespace echoStudy_webAPI
                 try
                 {
                     var echoContext = services.GetRequiredService<EchoStudyDB>();
-                    var identityContext = services.GetRequiredService<EchoStudyUsersRolesDB>();
+                    var identityContext = services.GetRequiredService<EchoStudyDB>();
                     var userManager = services.GetService<UserManager<EchoUser>>();
 
                     DbInitializer.CreateEchoStudyDB(echoContext, identityContext);

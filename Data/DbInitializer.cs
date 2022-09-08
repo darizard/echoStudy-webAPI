@@ -26,7 +26,7 @@ namespace echoStudy_webAPI.Data
             }
         }
 
-        public static void CreateEchoStudyDB(EchoStudyDB echoContext, EchoStudyUsersRolesDB identityContext)
+        public static void CreateEchoStudyDB(EchoStudyDB echoContext, EchoStudyDB identityContext)
         {
             // Create the DB if needed
             echoContext.Database.Migrate();
