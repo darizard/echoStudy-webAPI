@@ -39,44 +39,28 @@ namespace echoStudy_webAPI.Data
 
         public async Task<AuthenticationResponse> AuthenticateUserAsync(EchoUser user)
         {
-            // need a security token handler
-            var tokenHandler = new JwtSecurityTokenHandler();
-            // need byte array of key
-            var tokenKey = Encoding.ASCII.GetBytes(_jwtSettings.Key);
-            // per docs: This is a place holder for all the attributes related to the issued token.
-            var tokenDescriptor = new SecurityTokenDescriptor
+            // make sure we can generate new tokens with no issue
+            var response = await GenerateNewTokensAsync(user);
+            if (response == null)
             {
-                // per docs: Gets or sets the output claims to be included in the issued token.
-                // TODO: This probably needs to be changed. Check what the resulting Jwt looks like!
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())// we can add more to the JWT payload here
-                }),
-                // TEST VALUE. Change token expiry window for staging/prod
-                Expires = DateTime.UtcNow.AddMinutes(5),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(tokenKey),
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
-            var accessToken = tokenHandler.CreateToken(tokenDescriptor);
-            var refreshToken = new RefreshToken
-            {
-                JwtId = accessToken.Id,
-                UserId = user.Id,
-                CreationDate = DateTime.UtcNow,
-                ExpirationDate = DateTime.UtcNow.AddDays(14)
-            };
+                return response;
+            }
 
-            await _context.RefreshTokens.AddAsync(refreshToken);
-            await _context.SaveChangesAsync();
+            // determine whether user has an active refresh token
+            var activeRefreshTokenQuery = from rt in _context.RefreshTokens
+                                     where rt.UserId == user.Id &&
+                                       rt.Used == false &&
+                                       rt.Revoked == false
+                                     select rt;
 
-            return new AuthenticationResponse
+            // there should only be zero or one active tokens, but let's revoke them all just in case
+            foreach (var token in await activeRefreshTokenQuery.ToListAsync())
             {
-                Token = tokenHandler.WriteToken(accessToken),
-                RefreshToken = refreshToken.Token
-            };
+                if(token.CreationDate < DateTime.UtcNow && token.ExpirationDate > DateTime.UtcNow)
+                    token.Revoked = true;
+            }
+
+            return response;
         }
 
         public async Task<AuthenticationResponse> RefreshTokenAsync(string accessToken, string refreshToken)
@@ -143,7 +127,49 @@ namespace echoStudy_webAPI.Data
             var user = await _um.FindByIdAsync(validatedToken.Claims.Single
                                         (x => x.Type == JwtRegisteredClaimNames.Sub).Value);
             
-            return await AuthenticateUserAsync(user);
+            return await GenerateNewTokensAsync(user);
+        }
+
+        private async Task<AuthenticationResponse> GenerateNewTokensAsync(EchoUser user)
+        {
+            // need a security token handler
+            var tokenHandler = new JwtSecurityTokenHandler();
+            // need byte array of key
+            var tokenKey = Encoding.ASCII.GetBytes(_jwtSettings.Key);
+            // per docs: This is a place holder for all the attributes related to the issued token.
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                // per docs: Gets or sets the output claims to be included in the issued token.
+                // TODO: This probably needs to be changed. Check what the resulting Jwt looks like!
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())// we can add more to the JWT payload here
+                }),
+                // TEST VALUE. Change token expiry window for staging/prod
+                Expires = DateTime.UtcNow.AddMinutes(5),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(tokenKey),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+            var accessToken = tokenHandler.CreateToken(tokenDescriptor);
+            var refreshToken = new RefreshToken
+            {
+                JwtId = accessToken.Id,
+                UserId = user.Id,
+                CreationDate = DateTime.UtcNow,
+                ExpirationDate = DateTime.UtcNow.AddDays(14)
+            };
+
+            await _context.RefreshTokens.AddAsync(refreshToken);
+            await _context.SaveChangesAsync();
+
+            return new AuthenticationResponse
+            {
+                Token = tokenHandler.WriteToken(accessToken),
+                RefreshToken = refreshToken.Token
+            };
         }
 
         private ClaimsPrincipal GetPrincipalFromToken(string accessToken, bool allowExpired = true)
