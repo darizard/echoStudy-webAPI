@@ -478,7 +478,7 @@ namespace echoStudy_webAPI.Data
             using (var scope = host.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
-                var identityContext = services.GetService<EchoStudyUsersRolesDB>();
+                var identityContext = services.GetService<EchoStudyDB>();
 
                 string[] roles = new string[] { "Administrator", "Standard" };
 
