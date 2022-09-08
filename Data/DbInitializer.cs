@@ -26,7 +26,7 @@ namespace echoStudy_webAPI.Data
             }
         }
 
-        public static void CreateEchoStudyDB(EchoStudyDB echoContext, EchoStudyUsersRolesDB identityContext)
+        public static void CreateEchoStudyDB(EchoStudyDB echoContext, EchoStudyDB identityContext)
         {
             // Create the DB if needed
             echoContext.Database.Migrate();
@@ -478,7 +478,7 @@ namespace echoStudy_webAPI.Data
             using (var scope = host.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
-                var identityContext = services.GetService<EchoStudyUsersRolesDB>();
+                var identityContext = services.GetService<EchoStudyDB>();
 
                 string[] roles = new string[] { "Administrator", "Standard" };
 

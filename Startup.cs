@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace echoStudy_webAPI
 {
@@ -41,7 +42,26 @@ namespace echoStudy_webAPI
                         options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
 
             services.AddDbContext<EchoStudyDB>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-            var key = "This is a test key";
+
+            // TODO: This might be redundant since the key is set in tokenValidationParameters
+            // and is kept in appsettings.json (or environment variable if we choose that route)
+            // Keep for now in case we want to add things like token lifetime to the JWT settings
+            var jwtSettings = new JwtSettings(Configuration);
+            services.AddSingleton(jwtSettings);
+
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSettings.Key)),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            services.AddSingleton(tokenValidationParameters);
+
+            // needs scoped because it depends on UserManager<EchoStudy> which is also scoped
+            services.AddScoped<IJwtAuthenticationManager, JwtAuthenticationManager>();
 
             services.AddAuthentication(x =>
             {
@@ -51,17 +71,10 @@ namespace echoStudy_webAPI
             {
                 x.RequireHttpsMetadata = false;
                 x.SaveToken = true;
-                x.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                    ClockSkew = TimeSpan.Zero
-                };
+                x.TokenValidationParameters = tokenValidationParameters;
             });
 
-            services.AddSingleton<IJwtAuthenticationManager>(new JwtAuthenticationManager(key));
+            //services.AddSingleton<IJwtAuthenticationManager>();
 
             services.AddAuthorization(options =>
             {
@@ -110,6 +123,8 @@ namespace echoStudy_webAPI
             
             app.UseCors("CorsPolicy");
 
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+            
             app.UseAuthentication();
             app.UseAuthorization();
 
