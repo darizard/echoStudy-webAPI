@@ -461,6 +461,13 @@ namespace echoStudy_webAPI.Controllers
             {
                 return BadRequest("userId is required");
             }
+            else
+            {
+                if(cardInfo.userId != _user.Id)
+                {
+                    return Forbid();
+                }
+            }
             if (cardInfo.deckId is null)
             {
                 return BadRequest("deckId is required");
