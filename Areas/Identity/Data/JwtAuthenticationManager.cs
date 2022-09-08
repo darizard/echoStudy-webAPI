@@ -82,7 +82,7 @@ namespace echoStudy_webAPI.Data
         public async Task<AuthenticationResponse> RefreshTokenAsync(string accessToken, string refreshToken)
         {
             // validate the token using a token handler and return the principal
-            var validatedToken = GetPrincipalFromToken(accessToken);
+            var validatedToken = GetPrincipalFromTokenExpiredAllowed(accessToken);
             if(validatedToken == null)
             {
                 return null;
@@ -146,13 +146,19 @@ namespace echoStudy_webAPI.Data
             return await AuthenticateUserAsync(user);
         }
 
-        private ClaimsPrincipal GetPrincipalFromToken(string accessToken)
+        private ClaimsPrincipal GetPrincipalFromTokenExpiredAllowed(string accessToken)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             try
             {
+                // configure special validation parameters for validating the access token on
+                // a refresh request. we don't want to validate token lifetime as it is expected
+                // to be expired the majority of the time
+                var tokenValidationParamsAllowExpired = _tokenValidationParameters.Clone();
+                tokenValidationParamsAllowExpired.ValidateLifetime = false;
+
                 var principal = tokenHandler.ValidateToken
-                    (accessToken, _tokenValidationParameters, out var validatedToken);
+                    (accessToken, tokenValidationParamsAllowExpired, out var validatedToken);
                 if (!IsJwtWithValidSecurityAlgorithm(validatedToken))
                 {
                     return null;
