@@ -263,7 +263,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at the cardId provided was not found</response>
         [HttpPost("{id}")]
-        [Produces("application/json")]
+        [Produces("application/json", "text/plain")]
         [ProducesResponseType(typeof(CardUpdateResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
@@ -271,18 +271,67 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> PostCardEdit(int id, [FromBody] PostCardInfo cardInfo)
         {
-            Card card;
-            var cardQuery = from c in _context.Cards
-                            where c.CardID == id
-                            select c;
-            if ((card = await cardQuery.FirstAsync()) is null) return NotFound("Card id " + id + " not found");
-
-            if(card.UserId != _user.Id)
+            // Ensure the card exists and that the owner made the request
+            Card card = await _context.Cards.FindAsync(id);
+            if (card is null)
+            {
+                return NotFound("Card id " + id + " not found");
+            }
+            if (card.UserId != _user.Id)
             {
                 return Forbid();
             }
 
             //-------Update according to incoming info
+
+            // if the card is changing decks, we need to update both decks
+            int? olddeckid = null;
+            if (cardInfo.deckId is not null)
+            {
+                olddeckid = card.DeckID;
+                card.DeckID = (int)cardInfo.deckId;
+
+                if (olddeckid != cardInfo.deckId)
+                {
+                    // Update/validate the new deck
+                    var newQuery = from d in _context.Decks.Include(d => d.Cards)
+                                   where d.DeckID == cardInfo.deckId
+                                   select d;
+                    Deck newDeck = await newQuery.FirstOrDefaultAsync();
+                    // Ensure the new deck is valid and then add the card and change the updated date
+                    if (newDeck is null)
+                    {
+                        return NotFound("Deck id " + cardInfo.deckId + " not found");
+                    }
+                    if (newDeck.UserId != _user.Id)
+                    {
+                        return Forbid();
+                    }
+                    newDeck.Cards.Add(card);
+                    newDeck.DateUpdated = DateTime.Now;
+
+                    // Update the old deck if it exists
+                    var oldQuery = from d in _context.Decks.Include(d => d.Cards)
+                                   where d.DeckID == olddeckid
+                                   select d;
+                    Deck oldDeck = await oldQuery.FirstOrDefaultAsync();
+                    if (oldDeck is not null)
+                    {
+                        oldDeck.Cards.Remove(card);
+                        oldDeck.DateUpdated = DateTime.Now;
+                    }
+
+                    _context.Decks.Update(oldDeck);
+                    _context.Decks.Update(newDeck);
+                }
+                else
+                {
+                    Deck deck = await _context.Decks.FindAsync(olddeckid);
+                    deck.DateUpdated = DateTime.Now;
+                    _context.Decks.Update(deck);
+                }
+            }
+
             if (cardInfo.userId is not null)
             {
                 EchoUser user = await _um.FindByIdAsync(cardInfo.userId);
@@ -338,13 +387,7 @@ namespace echoStudy_webAPI.Controllers
                         return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
                 }
             }
-            // if the card is changing decks, we need to change both decks' updated date
-            int? olddeckid = null;
-            if (cardInfo.deckId is not null)
-            {
-                olddeckid = card.DeckID;
-                card.DeckID = (int)cardInfo.deckId;
-            }
+
             // Dates
             card.DateUpdated = DateTime.Now;
 
@@ -359,18 +402,6 @@ namespace echoStudy_webAPI.Controllers
             }
 
             _context.Cards.Update(card);
-
-            // Get the deck(s) whose DateUpdated needs to be changed
-            // card.DeckID is either the same deck the card started with or the new DeckID
-            var deckquery = from d in _context.Decks
-                            where d.DeckID == card.DeckID || d.DeckID == olddeckid
-                            select d;
-
-            foreach (var deck in deckquery)
-            {
-                deck.DateUpdated = card.DateUpdated;
-                _context.Decks.Update(deck);
-            }
 
             try
             {
@@ -539,7 +570,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at cardId was not found</response>
         [HttpPost("Delete/{id}")]
-        [Produces("text/plain")]
+        [Produces("text/plain", "application/json")]
         [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
