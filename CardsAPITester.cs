@@ -46,8 +46,11 @@ namespace echoStudy_webAPI.Tests
                 client.BaseAddress = new Uri("http://api.echostudy.com/");
             }
 
+            client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Accept.Add(
+    new MediaTypeWithQualityHeaderValue("text/plain"));
         }
 
         /**
@@ -198,13 +201,13 @@ namespace echoStudy_webAPI.Tests
             }
 
             // TEST 1: Attempts to delete a card that doesn't exist
-            HttpResponseMessage response = await client.PostAsync("Cards/Delete/600", null);
+            HttpResponseMessage response = await client.PostAsync("Cards/Delete/100000", null);
 
             if (response.IsSuccessStatusCode)
             {
                 Assert.Fail("TEST 1: Request succeeded for a card that doesn't exist");
             }
-            /*
+            
             else
             {
                 if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
@@ -212,16 +215,15 @@ namespace echoStudy_webAPI.Tests
                     Assert.Fail("TEST 2: Status code for a card that doesn't exist wasn't NotFound");
                 }
             }
-            */
+            
 
             // TEST 2: Attempts to delete a card that John doesn't own
-            response = await client.GetAsync("Cards/Delete/600");
+            response = await client.PostAsync("Cards/Delete/600", null);
 
             if (response.IsSuccessStatusCode)
             {
                 Assert.Fail("TEST 2: Request succeeded for deleting a card John doesn't own");
             }
-            /*
             else
             {
                 if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
@@ -229,7 +231,6 @@ namespace echoStudy_webAPI.Tests
                     Assert.Fail("TEST 2: Status code for a card that doesn't exist wasn't Forbidden");
                 }
             }
-            */
 
             // TEST 3: Create a card and then delete it and then ensure it's actually deleted
             PostCardInfo cardInfo = new PostCardInfo();
@@ -339,6 +340,13 @@ namespace echoStudy_webAPI.Tests
             if (response.IsSuccessStatusCode)
             {
                 Assert.Fail("TEST 1: Request succeeded with empty deckId");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("TEST 1: Status code was not BadRequest for missing parameters");
+                }
             }
 
             // no userid
@@ -461,6 +469,13 @@ namespace echoStudy_webAPI.Tests
             {
                 Assert.Fail("TEST 1: Request succeeded for a nonexistent card");
             }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    Assert.Fail("TEST 1: Status code was not Forbidden for creating a card in someone else's deck");
+                }
+            }
 
             // TEST 2: Edit a card with an invalid deckId
             // Card
@@ -470,10 +485,35 @@ namespace echoStudy_webAPI.Tests
             response = await client.PostAsync("Cards/1", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 1: Request succeeded for a nonexistent deckId");
+                Assert.Fail("TEST 2: Request succeeded for a nonexistent deckId");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    Assert.Fail("TEST 2: Status code was not NotFound for a nonexistent deckId");
+                }
             }
 
-            // TEST 3: Edit a card with an invalid userId
+            // TEST 3: Edit a card with a deckId that John doesn't own
+            // Card
+            cardInfo = new PostCardInfo();
+            await populateCard(cardInfo);
+            cardInfo.deckId = 6;
+            response = await client.PostAsync("Cards/1", createContent(cardInfo));
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 3: Request succeeded for a deckId that John doesn't own");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+                {
+                    Assert.Fail("TEST 3: Status code was not Forbidden for a deckId John doesn't own");
+                }
+            }
+
+            // TEST 4: Edit a card with an invalid userId
             // Card
             cardInfo = new PostCardInfo();
             await populateCard(cardInfo);
@@ -481,20 +521,34 @@ namespace echoStudy_webAPI.Tests
             response = await client.PostAsync("Cards/1", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 1: Request succeeded for a bogus userId");
+                Assert.Fail("TEST 4: Request succeeded for a bogus userId");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("TEST 4: Status code was not BadRequest for creating a card with a bad userId");
+                }
             }
 
-            // TEST 4: Edit a card that someone else owns
+            // TEST 5: Edit a card that someone else owns
             // Card
             cardInfo = new PostCardInfo();
             await populateCard(cardInfo);
             response = await client.PostAsync("Cards/600", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 1: Request succeeded for a bogus userId");
+                Assert.Fail("TEST 5: Request succeeded for a card that someone else owns");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+                {
+                    Assert.Fail("TEST 5: Status code was not Forbidden for editing someone else's card");
+                }
             }
 
-            // TEST 5: Edit a valid card
+            // TEST 6: Edit a valid card
             // First, store the old info
             response = await client.GetAsync("Cards/1");
             CardInfo oldCard = new CardInfo();
@@ -505,7 +559,7 @@ namespace echoStudy_webAPI.Tests
             }
             else
             {
-                Assert.Fail("TEST 5: Failed to grab a card that should exist");
+                Assert.Fail("TEST65: Failed to grab a card that should exist");
             }
 
             // Card
@@ -542,17 +596,17 @@ namespace echoStudy_webAPI.Tests
                     response = await client.PostAsync("Cards/1", createContent(cardInfo));
                     if (!response.IsSuccessStatusCode)
                     {
-                        Assert.Fail("TEST 5: Request failed to restore the old card after editing");
+                        Assert.Fail("TEST 6: Request failed to restore the old card after editing");
                     }
                 }
                 else
                 {
-                    Assert.Fail("TEST 5: Request failed to get the edited card");
+                    Assert.Fail("TEST 6: Request failed to get the edited card");
                 }
             }
             else
             {
-                Assert.Fail("TEST 5: Request failed to edit a card");
+                Assert.Fail("TEST 6: Request failed to edit a card");
             }
         }
 
@@ -688,4 +742,3 @@ namespace echoStudy_webAPI.Tests
         }
     }
 }
-
