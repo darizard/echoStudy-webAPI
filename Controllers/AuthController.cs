@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Http;
 using echoStudy_webAPI.Data.Responses;
+using System;
+using Microsoft.IdentityModel.Tokens;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -28,6 +30,34 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /// <summary>
+        /// Creates an EchoUser
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="userCreds">Credentials of the authenticating user (Subject)</param>
+        /// <response code="200">Returns the JSON Web Token object</response>
+        /// <response code="401">Invalids User Credentials were provided</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(OkResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Register([FromBody] UserCreds userCreds)
+        {
+            throw new NotImplementedException();
+            /*
+            EchoUser user = await _um.FindByEmailAsync(userCreds.username.ToUpper());
+            if (!await _um.CheckPasswordAsync(user, userCreds.password)
+                || user == null)
+            {
+                return Unauthorized();
+            }
+
+            var authResponse = await _jwtManager.AuthenticateUserAsync(user);
+            return Ok(authResponse);*/
+        }
+
+        /// <summary>
         /// Generates and produces a JSON Web Token object for use in
         /// authentication and authorization for subsequent API calls.
         /// </summary>
@@ -41,8 +71,15 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [HttpPost("authenticate")]
         [AllowAnonymous]
-        public async Task<IActionResult> Authenticate([FromBody] UserCreds userCreds)
+        public async Task<IActionResult> Authenticate([FromBody] UserCreds userCreds = null)
         {
+            AuthenticationResponse authResponse;
+            Console.WriteLine("break here");
+            if(userCreds.username.IsNullOrEmpty() && userCreds.password.IsNullOrEmpty())
+            {
+                authResponse = await _jwtManager.AuthenticateUserAsync(null);
+                return Ok(authResponse);
+            }
             EchoUser user = await _um.FindByEmailAsync(userCreds.username.ToUpper());
             if (!await _um.CheckPasswordAsync(user, userCreds.password) 
                 || user == null)
@@ -50,7 +87,7 @@ namespace echoStudy_webAPI.Controllers
                 return Unauthorized();
             }
 
-            var authResponse = await _jwtManager.AuthenticateUserAsync(user);
+            authResponse = await _jwtManager.AuthenticateUserAsync(user);
             return Ok(authResponse);
         }
 

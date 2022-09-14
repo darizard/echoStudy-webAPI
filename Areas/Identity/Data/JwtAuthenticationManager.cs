@@ -46,18 +46,21 @@ namespace echoStudy_webAPI.Data
                 return response;
             }
 
-            // determine whether user has an active refresh token
-            var activeRefreshTokenQuery = from rt in _context.RefreshTokens
-                                     where rt.UserId == user.Id &&
-                                       rt.Used == false &&
-                                       rt.Revoked == false
-                                     select rt;
-
-            // there should only be zero or one active tokens, but let's revoke them all just in case
-            foreach (var token in await activeRefreshTokenQuery.ToListAsync())
+            // if not anonymous auth, determine whether user has an active refresh token
+            if (user != null)
             {
-                if(token.CreationDate < DateTime.UtcNow && token.ExpirationDate > DateTime.UtcNow)
-                    token.Revoked = true;
+                var activeRefreshTokenQuery = from rt in _context.RefreshTokens
+                                          where rt.UserId == user.Id &&
+                                            rt.Used == false &&
+                                            rt.Revoked == false
+                                          select rt;
+
+                // there should only be zero or one active tokens, but let's revoke them all just in case
+                foreach (var token in await activeRefreshTokenQuery.ToListAsync())
+                {
+                    if (token.CreationDate < DateTime.UtcNow && token.ExpirationDate > DateTime.UtcNow)
+                        token.Revoked = true;
+                }
             }
 
             return response;
@@ -132,6 +135,19 @@ namespace echoStudy_webAPI.Data
 
         private async Task<AuthenticationResponse> GenerateNewTokensAsync(EchoUser user)
         {
+            string tokensub;
+            string tokenemail;
+            if (user == null)
+            {
+                tokensub = "";
+                tokenemail = "";
+            }
+            else
+            {
+                tokensub = user.Id.ToString();
+                tokenemail = user.Email;
+            }
+
             // need a security token handler
             var tokenHandler = new JwtSecurityTokenHandler();
             // need byte array of key
@@ -143,8 +159,8 @@ namespace echoStudy_webAPI.Data
                 // TODO: This probably needs to be changed. Check what the resulting Jwt looks like!
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Sub, tokensub),
+                    new Claim(JwtRegisteredClaimNames.Email, tokenemail),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())// we can add more to the JWT payload here
                 }),
                 // TEST VALUE. Change token expiry window for staging/prod
@@ -157,7 +173,7 @@ namespace echoStudy_webAPI.Data
             var refreshToken = new RefreshToken
             {
                 JwtId = accessToken.Id,
-                UserId = user.Id,
+                UserId = tokensub,
                 CreationDate = DateTime.UtcNow,
                 ExpirationDate = DateTime.UtcNow.AddDays(14)
             };
