@@ -15,6 +15,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Areas\Identity\Data\EchoStudyUsersRolesDB.cs" />
+    <Compile Remove="Migrations\20220325014144_InitialCreate.cs" />
+    <Compile Remove="Migrations\20220325014144_InitialCreate.Designer.cs" />
+    <Compile Remove="Migrations\EchoStudyUsersRolesDBModelSnapshot.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AWSSDK.Polly" Version="3.7.4.7" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.8.17" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
