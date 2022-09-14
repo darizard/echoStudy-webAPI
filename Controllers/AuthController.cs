@@ -3,6 +3,7 @@ using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using echoStudy_webAPI.Data;
+using echoStudy_webAPI.Data.Requests;
 using System.Threading.Tasks;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Http;
@@ -34,17 +35,36 @@ namespace echoStudy_webAPI.Controllers
         /// </summary>
         /// <remarks>
         /// </remarks>
-        /// <param name="userCreds">Credentials of the authenticating user (Subject)</param>
-        /// <response code="200">Returns the JSON Web Token object</response>
-        /// <response code="401">Invalids User Credentials were provided</response>
+        /// <param name="registerUserInfo">Credentials of the authenticating user (Subject)</param>
+        /// <response code="200">Returns the ID of the newly created user</response>
+        /// <response code="400">User registration could not be completed with the given request body</response>
         [Produces("application/json")]
-        [ProducesResponseType(typeof(OkResult), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(RegisterUserSuccess), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
         [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] UserCreds userCreds)
+        public async Task<IActionResult> Register([FromBody] RegisterUserRequest registerUserInfo)
         {
-            throw new NotImplementedException();
+            var user = new EchoUser
+            {
+                UserName = registerUserInfo.UserName,
+                Email = registerUserInfo.Email,
+                PhoneNumber = registerUserInfo.PhoneNumber
+            };
+            var identityResult = await _um.CreateAsync(user, registerUserInfo.Password);
+            if(identityResult.Succeeded)
+            {
+                return Ok(new RegisterUserSuccess
+                {
+                    Id = user.Id
+                });
+            }
+            else
+            {
+                return BadRequest(identityResult.Errors);
+            }
+
+
             /*
             EchoUser user = await _um.FindByEmailAsync(userCreds.username.ToUpper());
             if (!await _um.CheckPasswordAsync(user, userCreds.password)
