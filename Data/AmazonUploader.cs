@@ -50,7 +50,7 @@ namespace echoStudy_webAPI.Data
             GetPreSignedUrlRequest urlReq = new GetPreSignedUrlRequest();
             urlReq.BucketName = Resources.bucketName;
             urlReq.Key = getFileName(text, language);
-            urlReq.Expires = DateTime.Now.AddMinutes(10);
+            urlReq.Expires = DateTime.Now.AddMinutes(60);
             urlReq.Protocol = Protocol.HTTP; 
 
             // Send the request to get the url
