@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using static echoStudy_webAPI.Tests.Models.Models;
 
 namespace echoStudy_webAPI.Tests
 {
@@ -62,8 +63,8 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
-                await grabUserId();
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
             }
 
             // TEST 1: Get all of John's cards
@@ -138,8 +139,8 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
-                await grabUserId();
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
             }
 
             // TEST 1: Get a card that belongs to John
@@ -196,8 +197,8 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
-                await grabUserId();
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
             }
 
             // TEST 1: Attempts to delete a card that doesn't exist
@@ -234,7 +235,7 @@ namespace echoStudy_webAPI.Tests
 
             // TEST 3: Create a card and then delete it and then ensure it's actually deleted
             PostCardInfo cardInfo = new PostCardInfo();
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             response = await client.PostAsync("Cards", createContent(cardInfo));
 
             if (response.IsSuccessStatusCode)
@@ -262,15 +263,15 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
-                await grabUserId();
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
             }
 
             // TEST 1: Attempt to create cards with various bogus values
             PostCardInfo cardInfo = new PostCardInfo();
 
             // no backlang
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.backLang = null;
             HttpResponseMessage response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -286,7 +287,7 @@ namespace echoStudy_webAPI.Tests
             }
 
             // no frontlang
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.frontLang = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -302,7 +303,7 @@ namespace echoStudy_webAPI.Tests
             }
 
             // no fronttext
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.frontText = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -318,7 +319,7 @@ namespace echoStudy_webAPI.Tests
             }
 
             // no backtext
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.backText = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -334,7 +335,7 @@ namespace echoStudy_webAPI.Tests
             }
 
             // no deckid
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.deckId = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -350,7 +351,7 @@ namespace echoStudy_webAPI.Tests
             }
 
             // no userid
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.userId = null;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -366,7 +367,7 @@ namespace echoStudy_webAPI.Tests
             }
 
             // bogus deckId
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.deckId = -1;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -382,18 +383,24 @@ namespace echoStudy_webAPI.Tests
             }
 
             // bogus userId
-            /*
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.userId = "123456789";
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 1: Request succeeded with invalid userId");
+                Assert.Fail("TEST 1: Request succeeded with someone else's userId");
             }
-            */
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+                {
+                    Assert.Fail("TEST 1: Status code was not Forbidden for creating a card with someone else's user ID");
+                }
+            }
+
 
             // Access a deck John doesn't own
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.deckId = 5;
             response = await client.PostAsync("Cards", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -409,7 +416,7 @@ namespace echoStudy_webAPI.Tests
             }
 
             // TEST 2: Create valid cards
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             response = await client.PostAsync("Cards", createContent(cardInfo));
 
             if (response.IsSuccessStatusCode)
@@ -458,8 +465,8 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
-                await grabUserId();
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
             }
 
             // TEST 1: Edit a card with an invalid id
@@ -480,7 +487,7 @@ namespace echoStudy_webAPI.Tests
             // TEST 2: Edit a card with an invalid deckId
             // Card
             cardInfo = new PostCardInfo();
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.deckId = -1;
             response = await client.PostAsync("Cards/1", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -498,7 +505,7 @@ namespace echoStudy_webAPI.Tests
             // TEST 3: Edit a card with a deckId that John doesn't own
             // Card
             cardInfo = new PostCardInfo();
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.deckId = 6;
             response = await client.PostAsync("Cards/1", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -516,7 +523,7 @@ namespace echoStudy_webAPI.Tests
             // TEST 4: Edit a card with an invalid userId
             // Card
             cardInfo = new PostCardInfo();
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             cardInfo.userId = "1234567890";
             response = await client.PostAsync("Cards/1", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
@@ -534,7 +541,7 @@ namespace echoStudy_webAPI.Tests
             // TEST 5: Edit a card that someone else owns
             // Card
             cardInfo = new PostCardInfo();
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             response = await client.PostAsync("Cards/600", createContent(cardInfo));
             if (response.IsSuccessStatusCode)
             {
@@ -564,7 +571,7 @@ namespace echoStudy_webAPI.Tests
 
             // Card
             cardInfo = new PostCardInfo();
-            await populateCard(cardInfo);
+            populateCard(cardInfo);
             response = await client.PostAsync("Cards/1", createContent(cardInfo));
 
             if (response.IsSuccessStatusCode)
@@ -613,7 +620,7 @@ namespace echoStudy_webAPI.Tests
         /**
          * Populates given card info
          */
-        private async Task populateCard(PostCardInfo cardInfo)
+        private void populateCard(PostCardInfo cardInfo)
         {
             cardInfo.frontText = "To dance";
             cardInfo.backText = "tanzen";
@@ -621,26 +628,6 @@ namespace echoStudy_webAPI.Tests
             cardInfo.backLang = "German";
             cardInfo.userId = this.userId;
             cardInfo.deckId = 1;
-        }
-
-        /**
-         * Grabs the user ID from the JWT token
-         */
-        private async Task grabUserId()
-        {
-            // TEST 1: Get a card that belongs to John
-            HttpResponseMessage response = await client.GetAsync("Cards/1");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var contents = await response.Content.ReadAsStringAsync();
-                CardInfo card = JsonConvert.DeserializeObject<CardInfo>(contents);
-                this.userId = card.ownerId;
-            }
-            else
-            {
-                throw new Exception();
-            }
         }
 
         /**
@@ -653,92 +640,6 @@ namespace echoStudy_webAPI.Tests
 
             // Wrap our JSON inside a StringContent which then can be used by the HttpClient class
             return new StringContent(stringPayload, Encoding.UTF8, "application/json");
-        }
-
-        /**
-        * Gets John's token, should not be empty
-         */
-        public async Task GrabJohnToken()
-        {
-            // The user
-            UserInfo userDetails = new UserInfo();
-            userDetails.username = "JohnDoe@gmail.com";
-            userDetails.password = "123ABC!@#def";
-
-            // Get the token from the server
-            HttpContent signInContent = new StringContent(JsonConvert.SerializeObject(userDetails), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync("authenticate", signInContent);
-
-            // Parse and set the authorization header in the client
-            if (response.IsSuccessStatusCode)
-            {
-                client.DefaultRequestHeaders.Authorization =
-    new AuthenticationHeaderValue("Bearer", JsonConvert.DeserializeObject<string>(await response.Content.ReadAsStringAsync()));
-                userTokenSet = true;
-                return;
-            }
-
-            throw new Exception("Unable to retrieve John's token");
-        }
-
-        /**
-         * User Info
-         */
-        public class UserInfo
-        {
-            public string username;
-            public string password;
-        }
-
-        /**
-         * Response from API
-         */
-        public class CreatedResponse
-        {
-            public int id;
-            public DateTime dateCreated;
-        }
-
-        /**
-         * Response from API
-         */
-        public class UpdatedResponse
-        {
-            public int id;
-            public DateTime dateUpdated;
-        }
-
-        /**
- * This class should contain all information that should be returned to the user in a GET request
- */
-        public class CardInfo
-        {
-            public int id { get; set; }
-            public string ftext { get; set; }
-            public string btext { get; set; }
-            public string faud { get; set; }
-            public string baud { get; set; }
-            public string flang { get; set; }
-            public string blang { get; set; }
-            public int deckId { get; set; }
-            public int score { get; set; }
-            public string ownerId { get; set; }
-            public DateTime date_created { get; set; }
-            public DateTime date_updated { get; set; }
-            public DateTime date_touched { get; set; }
-        }
-
-        /**
-         * This class should contain all information that should be provided in order to create or update a card
-         */
-        public class PostCardInfo
-        {
-            public string frontText { get; set; }
-            public string backText { get; set; }
-            public string frontLang { get; set; }
-            public string backLang { get; set; }
-            public string userId { get; set; }
-            public int? deckId { get; set; }
         }
     }
 }
