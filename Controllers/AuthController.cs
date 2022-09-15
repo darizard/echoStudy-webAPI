@@ -91,10 +91,11 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks>
         /// </remarks>
         /// <param name="registerUserInfo">Credentials of the authenticating user (Subject)</param>
-        /// <response code="204">Returns no content if the user was deleted successfully </response>
-        /// <response code="400">User deletion could not be completed with the given request body</response>
+        /// <response code="204">Returns no content if the user was deleted successfully</response>
+        /// <response code="400">User deletion could not be completed with the given request body OR identity failed deletion</response>
+        /// <response code="404">User does not exist</response>
         [Produces("application/json")]
-        [ProducesResponseType(typeof(RegisterUserSuccess), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
