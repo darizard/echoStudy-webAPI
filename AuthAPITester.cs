@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System;
 using static echoStudy_webAPI.Tests.CardsAPITester;
@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using static echoStudy_webAPI.Tests.Models.Models;
 
 namespace echoStudy_webAPI.Tests
 {
@@ -43,10 +44,41 @@ namespace echoStudy_webAPI.Tests
         }
 
         /**
-        * Ensures authorization post succeeds and fails properly
+        * Tests the POST register and POST delete endpoint with all possible types of requests
         */
         [TestMethod]
-        public async Task PostAuthenticateTest()
+        public async Task PostRegisterDeregisterTest()
+        {
+            RegisterUserRequest registerUserRequest = new RegisterUserRequest();
+            registerUserRequest.Email = "echotestuser12345@gmail.com";
+            registerUserRequest.Password = "123ABC!@#def";
+            registerUserRequest.PhoneNumber = "123-456-7890";
+            registerUserRequest.UserName = "echotestuser12345";
+
+            HttpContent userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await client.PostAsync("register", userContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
+                response = await client.PostAsync("deregister", userContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Assert.Fail("Failed to delete registered user");
+                }
+            }
+            else
+            {
+                Assert.Fail("Failed to register user");
+            }
+        }
+
+        /**
+        * Tests the POST authenticate and POST refresh endpoint with all possible types of requests
+        */
+        [TestMethod]
+        public async Task PostAuthorizationRefreshTest()
         {
             // The valid user
             UserInfo userDetails = new UserInfo();
@@ -60,10 +92,28 @@ namespace echoStudy_webAPI.Tests
             // Should be a successful request
             if (response.IsSuccessStatusCode)
             {
-                // Parse the token 
-                string userToken = JsonConvert.DeserializeObject<string>(await response.Content.ReadAsStringAsync());
+                // Parse the response
+                authResponse userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
+
+                // Make sure the token can be parsed
                 var handler = new JwtSecurityTokenHandler();
-                var jwtSecurityToken = handler.ReadJwtToken(userToken);
+                var jwtSecurityToken = handler.ReadJwtToken(userToken.Token);
+
+                // Make sure the refresh token works
+                HttpContent refreshContent = new StringContent(JsonConvert.SerializeObject(userToken), Encoding.UTF8, "application/json");
+                response = await client.PostAsync("refresh", refreshContent);
+                if (response.IsSuccessStatusCode)
+                {
+                    // Parse the response
+                    userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
+
+                    // Make sure the token can be parsed
+                    var jwtRefreshedSecurityToken = handler.ReadJwtToken(userToken.Token);
+                }
+                else
+                {
+                    Assert.Fail("Valid Post Refresh request failed to grab user token");
+                }
             }
             else
             {
@@ -88,6 +138,26 @@ namespace echoStudy_webAPI.Tests
                 if(response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
                 {
                     Assert.Fail("Post Authenticate does not return unauthorized upon failure");
+                }
+            }
+
+            // Attempt to get a refresh token with bogus content
+            authResponse fakeToken = new authResponse();
+            fakeToken.RefreshToken = "2803cxr4xnm8940";
+            fakeToken.Token = "293s0jx002m3mcx-z0wk0ak";
+            signInContent = new StringContent(JsonConvert.SerializeObject(fakeToken), Encoding.UTF8, "application/json");
+            response = await client.PostAsync("refresh", signInContent);
+
+            // Should be an unsuccessful request
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("Invalid Post Refresh succeeded in grabbing an invalid user");
+            }
+            else
+            {
+                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                {
+                    Assert.Fail("Post Refresh does not return unauthorized upon failure");
                 }
             }
         }
