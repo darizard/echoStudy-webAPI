@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using static echoStudy_webAPI.Tests.CardsAPITester;
+using static echoStudy_webAPI.Tests.Models.Models;
 
 namespace echoStudy_webAPI.Tests
 {
@@ -24,8 +25,6 @@ namespace echoStudy_webAPI.Tests
 
         // The user's id
         public string userId;
-
-        public string johnDoeId;
 
         public DeckAPITester()
         {
@@ -62,7 +61,7 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
+                await HelperFunctions.GrabJohnToken(client);
             }
 
             HttpResponseMessage response = await client.GetAsync("Decks");
@@ -87,7 +86,7 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
+                await HelperFunctions.GrabJohnToken(client);
             }
 
             HttpResponseMessage response = await client.GetAsync("Decks/Public");
@@ -112,7 +111,7 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
+                await HelperFunctions.GrabJohnToken(client);
             }
 
             // TEST 1: Get a deck that John owns
@@ -165,8 +164,8 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
-                await grabUserId();
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
             }
 
             // TEST 1: Ensure that decks with empty fields won't be created successfully
@@ -281,8 +280,8 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
-                await grabUserId();
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
             }
 
             // TEST 1: Ensure that a valid deck can be edited
@@ -372,7 +371,7 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
+                await HelperFunctions.GrabJohnToken(client);
             }
 
             // TEST 1: Ensure request for non-existent deck fails
@@ -434,7 +433,7 @@ namespace echoStudy_webAPI.Tests
             // Ensure John's token is set for the client first
             if (!userTokenSet)
             {
-                await GrabJohnToken();
+                await HelperFunctions.GrabJohnToken(client);
             }
 
             // TEST 1: Ensure request for non-existent deck fails
@@ -453,33 +452,6 @@ namespace echoStudy_webAPI.Tests
 
             // TEST 2: Delete all of John's decks and restore them
             // maybe 
-        }
-
-
-        /**
-        * Gets John's token, should not be empty
-        f */
-        public async Task GrabJohnToken()
-        {
-            // The user
-            UserInfo userDetails = new UserInfo();
-            userDetails.username = "JohnDoe@gmail.com";
-            userDetails.password = "123ABC!@#def";
-
-            // Get the token from the server
-            HttpContent signInContent = new StringContent(JsonConvert.SerializeObject(userDetails), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync("authenticate", signInContent);
-
-            // Parse and set the authorization header in the client
-            if (response.IsSuccessStatusCode)
-            {
-                client.DefaultRequestHeaders.Authorization =
-    new AuthenticationHeaderValue("Bearer", JsonConvert.DeserializeObject<string>(await response.Content.ReadAsStringAsync()));
-                userTokenSet = true;
-                return;
-            }
-
-            throw new Exception("Unable to retrieve John's token");
         }
 
         /**
@@ -503,77 +475,7 @@ namespace echoStudy_webAPI.Tests
             deckInfo.description = "Fake deck used for testing purposes";
             deckInfo.default_flang = "Japanese";
             deckInfo.default_blang = "Spanish";
-            deckInfo.userId = johnDoeId;
-        }
-
-        /**
-        * Grabs the user ID from the JWT token
-        */
-        public async Task grabUserId()
-        {
-            // TEST 1: Get a card that belongs to John
-            HttpResponseMessage response = await client.GetAsync("Cards/1");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var contents = await response.Content.ReadAsStringAsync();
-                CardInfo card = JsonConvert.DeserializeObject<CardInfo>(contents);
-                this.userId = card.ownerId;
-            }
-            else
-            {
-                throw new Exception();
-            }
-        }
-
-        /**
-        * This class should contain all information needed in a GET request
-        */
-        public class DeckInfo
-        {
-            public int id { get; set; }
-            public string title { get; set; }
-            public string description { get; set; }
-            public string access { get; set; }
-            public string default_flang { get; set; }
-            public string default_blang { get; set; }
-            public string ownerId { get; set; }
-            public List<int> cards { get; set; }
-            public DateTime date_created { get; set; }
-            public DateTime date_updated { get; set; }
-            public DateTime date_touched { get; set; }
-        }
-
-        /**
-         * This class should contain all information needed from the user to create a row in the database
-         */
-        public class PostDeckInfo
-        {
-            public string title { get; set; }
-            public string description { get; set; }
-            public string access { get; set; }
-            public string default_flang { get; set; }
-            public string default_blang { get; set; }
-            public string userId { get; set; }
-            public List<int> cardIds { get; set; }
-        }
-
-        /**
-        * Response from API
-        */
-        public class CreatedResponse
-        {
-            public int id;
-            public DateTime dateCreated;
-        }
-
-        /**
-         * Response from API
-         */
-        public class UpdatedResponse
-        {
-            public int id;
-            public DateTime dateUpdated;
+            deckInfo.userId = userId;
         }
     }
 }
