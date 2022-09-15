@@ -8,6 +8,11 @@ This project was made in Spring 2022 and Fall 2022 as a senior project at the Un
 
 ## Change Log
 
+* 0.4
+    * AuthController created with endpoints for user accounts
+    * JWT Tokens implemented
+    * Refresh token rotation implemented
+
 * 0.3
     * File naming system for audio files fixed allowing all characters
     * Audio files will now always be the same voice for our supported languages

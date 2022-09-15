@@ -28,10 +28,13 @@ namespace echoStudy_webAPI.Data
 
         public static void CreateEchoStudyDB(EchoStudyDB echoContext, EchoStudyDB identityContext)
         {
-            // Create the DB if needed
-            echoContext.Database.Migrate();
-            // Migrate Identity
-            identityContext.Database.Migrate();
+            // Create the DB if it isn't already created
+            if(echoContext.Database.EnsureCreated() == false)
+            {
+                // Migrations
+                echoContext.Database.Migrate();
+                identityContext.Database.Migrate();
+            }
         }
 
         /**
@@ -504,6 +507,7 @@ namespace echoStudy_webAPI.Data
                     NormalizedUserName = "ADMIN",
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
+                    PhoneNumber = "123-456-7890",
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -515,6 +519,7 @@ namespace echoStudy_webAPI.Data
                     NormalizedUserName = "JOHNDOE",
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
+                    PhoneNumber = "123-456-7890",
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -526,6 +531,7 @@ namespace echoStudy_webAPI.Data
                     NormalizedUserName = "JANEDOE",
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
+                    PhoneNumber = "123-456-7890",
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -537,6 +543,7 @@ namespace echoStudy_webAPI.Data
                     NormalizedUserName = "JOHNSMITH",
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
+                    PhoneNumber = "123-456-7890",
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -548,6 +555,7 @@ namespace echoStudy_webAPI.Data
                     NormalizedUserName = "MARYSMITH",
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
+                    PhoneNumber = "123-456-7890",
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -559,6 +567,7 @@ namespace echoStudy_webAPI.Data
                     NormalizedUserName = "GEORGEBROWN",
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
+                    PhoneNumber = "123-456-7890",
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -570,6 +579,7 @@ namespace echoStudy_webAPI.Data
                     NormalizedUserName = "SARAHBROWN",
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
+                    PhoneNumber = "123-456-7890",
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 

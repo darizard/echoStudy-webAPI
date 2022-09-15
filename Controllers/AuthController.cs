@@ -10,6 +10,11 @@ using Microsoft.AspNetCore.Http;
 using echoStudy_webAPI.Data.Responses;
 using System;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using echoStudy_webAPI.Models;
+using System.Linq;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using System.Collections.Generic;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -22,12 +27,15 @@ namespace echoStudy_webAPI.Controllers
     {
         private static UserManager<EchoUser> _um;
         private readonly IJwtAuthenticationManager _jwtManager;
-        
+        private readonly EchoStudyDB _context;
+
         public AuthController(UserManager<EchoUser> um,
-                              IJwtAuthenticationManager jwtManager)
+                              IJwtAuthenticationManager jwtManager,
+                              EchoStudyDB context)
         {
             _um = um;
             _jwtManager = jwtManager;
+            _context = context;
         }
 
         /// <summary>
@@ -75,6 +83,117 @@ namespace echoStudy_webAPI.Controllers
 
             var authResponse = await _jwtManager.AuthenticateUserAsync(user);
             return Ok(authResponse);*/
+        }
+
+        /// <summary>
+        /// Deletes an EchoUser and all of their content
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="registerUserInfo">Credentials of the authenticating user (Subject)</param>
+        /// <response code="204">Returns no content if the user was deleted successfully </response>
+        /// <response code="400">User deletion could not be completed with the given request body</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(RegisterUserSuccess), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("deregister")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Deregister([FromBody] RegisterUserRequest registerUserInfo)
+        {
+            // Null checks
+            if(registerUserInfo.Email is null)
+            {
+                return BadRequest("Email must be provided");
+            }
+            if (registerUserInfo.Password is null)
+            {
+                return BadRequest("Password must be provided");
+            }
+            if (registerUserInfo.PhoneNumber is null)
+            {
+                return BadRequest("Phone number must be provided");
+            }
+            if (registerUserInfo.UserName is null)
+            {
+                return BadRequest("Username must be provided");
+            }
+
+            // Ennsure the user exists and everything is right
+            EchoUser user = await _um.FindByEmailAsync(registerUserInfo.Email);
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (!await _um.CheckPasswordAsync(user, registerUserInfo.Password))
+            {
+                return Unauthorized();
+            }
+            if(registerUserInfo.PhoneNumber != user.PhoneNumber)
+            {
+                return BadRequest("Provided phone number does not match");
+            }
+            if (user.UserName != registerUserInfo.UserName)
+            {
+                return BadRequest("Provided username does not match");
+            }
+
+            // Try to delete the user
+            var identityResult = await _um.DeleteAsync(user);
+            if (identityResult.Succeeded)
+            {
+                // User was deleted, now delete all of their data
+
+                // Categories
+                var categoryQuery = from dc in _context.DeckCategories
+                            where dc.UserId == user.Id
+                            select dc;
+                List<DeckCategory> deckCategories = await categoryQuery.ToListAsync();
+                foreach (DeckCategory deckCategory in deckCategories)
+                {
+                    _context.DeckCategories.Remove(deckCategory);
+                }
+
+                // Decks
+                var deckQuery = from d in _context.Decks
+                        where d.UserId == user.Id
+                        select d;
+                List<Deck> decks = await deckQuery.ToListAsync();
+                foreach (Deck deck in decks)
+                {
+                    _context.Decks.Remove(deck);
+                }
+
+                // Cards
+                var cardQuery = from c in _context.Cards
+                                where c.UserId == user.Id
+                                select c;
+                List<Card> cards = await cardQuery.ToListAsync();
+                foreach (Card card in cards)
+                {
+                    _context.Cards.Remove(card);
+                }
+
+                // Tokens
+                var tokenQuery = from t in _context.RefreshTokens
+                                where t.UserId == user.Id
+                                select t;
+                List<RefreshToken> tokens = await tokenQuery.ToListAsync();
+                foreach (RefreshToken refreshToken in tokens)
+                {
+                    _context.RefreshTokens.Remove(refreshToken);
+                }
+
+                // Save
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            else
+            {
+                return BadRequest(identityResult.Errors);
+            }
         }
 
         /// <summary>
