@@ -44,6 +44,90 @@ namespace echoStudy_webAPI.Tests
         }
 
         /**
+        * Tests the POST edituser endpoint with all possible types of requests
+        */
+        [TestMethod]
+        public async Task PostEditUserTest()
+        {
+            RegisterUserRequest registerUserRequest = new RegisterUserRequest();
+            registerUserRequest.Email = "echotestuser12345@gmail.com";
+            registerUserRequest.Password = "123ABC!@#def";
+            registerUserRequest.PhoneNumber = "123-456-7890";
+            registerUserRequest.UserName = "echotestuser12345";
+
+            HttpContent userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await client.PostAsync("register", userContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                registerUserRequest.PhoneNumber = "0";
+                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
+                response = await client.PostAsync("edituser", userContent);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Assert.Fail("Failed to edit user");
+                }
+
+                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
+                response = await client.PostAsync("deregister", userContent);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Assert.Fail("Failed to delete edited user");
+                }
+            }
+            else
+            {
+                Assert.Fail("Failed to register user");
+            }
+        }
+
+        /**
+        * Tests the POST changepassword endpoint with all possible types of requests
+        */
+        [TestMethod]
+        public async Task PostChangePasswordTest()
+        {
+            RegisterUserRequest registerUserRequest = new RegisterUserRequest();
+            registerUserRequest.Email = "echotestuser12345@gmail.com";
+            registerUserRequest.Password = "123ABC!@#def";
+            registerUserRequest.PhoneNumber = "123-456-7890";
+            registerUserRequest.UserName = "echotestuser12345";
+
+            HttpContent userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await client.PostAsync("register", userContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                ChangePasswordRequest changePasswordRequest = new ChangePasswordRequest();
+                changePasswordRequest.Email = "echotestuser12345@gmail.com";
+                changePasswordRequest.OldPassword = "123ABC!@#def";
+                changePasswordRequest.NewPassword = "NewPassword123!@#";
+                changePasswordRequest.PhoneNumber = "123-456-7890";
+
+                userContent = new StringContent(JsonConvert.SerializeObject(changePasswordRequest), Encoding.UTF8, "application/json");
+                response = await client.PostAsync("changepassword", userContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Assert.Fail("Request failed to change password");
+                }
+
+                registerUserRequest.Password = "NewPassword123!@#";
+                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
+                response = await client.PostAsync("deregister", userContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Assert.Fail("Failed to deregister user with new password");
+                }
+            }
+            else
+            {
+                Assert.Fail("Failed to register user");
+            }
+        }
+
+        /**
         * Tests the POST register and POST delete endpoint with all possible types of requests
         */
         [TestMethod]
@@ -60,6 +144,46 @@ namespace echoStudy_webAPI.Tests
 
             if (response.IsSuccessStatusCode)
             {
+                // Attempt to get a token
+                UserInfo userDetails = new UserInfo();
+                userDetails.username = registerUserRequest.Email;
+                userDetails.password = registerUserRequest.Password;
+
+                // Get the token from the server
+                HttpContent signInContent = new StringContent(JsonConvert.SerializeObject(userDetails), Encoding.UTF8, "application/json");
+                response = await client.PostAsync("authenticate", signInContent);
+
+                // Should be a successful request
+                if (response.IsSuccessStatusCode)
+                {
+                    // Parse the response
+                    authResponse userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
+
+                    // Make sure the token can be parsed
+                    var handler = new JwtSecurityTokenHandler();
+                    var jwtSecurityToken = handler.ReadJwtToken(userToken.Token);
+
+                    // Make sure the refresh token works
+                    HttpContent refreshContent = new StringContent(JsonConvert.SerializeObject(userToken), Encoding.UTF8, "application/json");
+                    response = await client.PostAsync("refresh", refreshContent);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // Parse the response
+                        userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
+
+                        // Make sure the token can be parsed
+                        var jwtRefreshedSecurityToken = handler.ReadJwtToken(userToken.Token);
+                    }
+                    else
+                    {
+                        Assert.Fail("Valid Post Refresh request failed to grab user token");
+                    }
+                }
+                else
+                {
+                    Assert.Fail("Valid Post Authenticate request failed to grab a valid user");
+                }
+
                 userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
                 response = await client.PostAsync("deregister", userContent);
 
