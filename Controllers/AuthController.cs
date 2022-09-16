@@ -39,6 +39,79 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /// <summary>
+        /// Changes password for given echoUser
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="changePasswordInfo"> Important credentials of the authenticating user as well as their new password (Subject)</param>
+        /// <response code="204">Returns no content if the password was changed successfully</response>
+        /// <response code="400">The new password did not meet security requirements OR the action could not be completed with provided request body</response>
+        /// <response code="401">Old password or </response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("changepassword")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest changePasswordInfo)
+        {
+            // Null/logic checks
+            if (changePasswordInfo.Email is null)
+            {
+                return BadRequest("Email must be provided");
+            }
+            if (changePasswordInfo.PhoneNumber is null)
+            {
+                return BadRequest("Phone number must be provided");
+            }
+            if (changePasswordInfo.OldPassword is null)
+            {
+                return BadRequest("Old password must be provided");
+            }
+            if (changePasswordInfo.NewPassword is null)
+            {
+                return BadRequest("New password must be provided");
+            }
+            if (changePasswordInfo.NewPassword == changePasswordInfo.OldPassword)
+            {
+                return BadRequest("New and old password must be different");
+            }
+
+            // Ennsure the user exists and everything is right (Phone number and old password match)
+            EchoUser user = await _um.FindByEmailAsync(changePasswordInfo.Email);
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (changePasswordInfo.PhoneNumber != user.PhoneNumber)
+            {
+                return BadRequest("Provided phone number does not match");
+            }
+            if (!await _um.CheckPasswordAsync(user, changePasswordInfo.OldPassword))
+            {
+                return Unauthorized();
+            }
+
+            // Change the password using a password token and try to save
+            var passwordToken = await _um.GeneratePasswordResetTokenAsync(user);
+            var identityResult = await _um.ResetPasswordAsync(user, passwordToken, changePasswordInfo.NewPassword);
+            if (identityResult.Succeeded)
+            {
+                // Save
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            else
+            {
+                return BadRequest(identityResult.Errors);
+            }
+        }
+
+        /// <summary>
         /// Creates an EchoUser
         /// </summary>
         /// <remarks>
@@ -135,7 +208,7 @@ namespace echoStudy_webAPI.Controllers
             {
                 return BadRequest("Provided phone number does not match");
             }
-            if (user.UserName != registerUserInfo.UserName)
+            if (user.UserName.ToLower() != registerUserInfo.UserName.ToLower())
             {
                 return BadRequest("Provided username does not match");
             }
