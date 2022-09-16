@@ -3,7 +3,6 @@ using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using echoStudy_webAPI.Data;
-using echoStudy_webAPI.Data.Requests;
 using System.Threading.Tasks;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Http;
@@ -13,8 +12,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using echoStudy_webAPI.Models;
 using System.Linq;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using System.Collections.Generic;
+using echoStudy_webAPI.Data.Requests;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -39,79 +38,6 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /// <summary>
-        /// Changes password for given echoUser
-        /// </summary>
-        /// <remarks>
-        /// </remarks>
-        /// <param name="changePasswordInfo"> Important credentials of the authenticating user as well as their new password (Subject)</param>
-        /// <response code="204">Returns no content if the password was changed successfully</response>
-        /// <response code="400">The new password did not meet security requirements OR the action could not be completed with provided request body</response>
-        /// <response code="401">Old password or </response>
-        /// <response code="404">User does not exist</response>
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        [HttpPost("changepassword")]
-        [AllowAnonymous]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest changePasswordInfo)
-        {
-            // Null/logic checks
-            if (changePasswordInfo.Email is null)
-            {
-                return BadRequest("Email must be provided");
-            }
-            if (changePasswordInfo.PhoneNumber is null)
-            {
-                return BadRequest("Phone number must be provided");
-            }
-            if (changePasswordInfo.OldPassword is null)
-            {
-                return BadRequest("Old password must be provided");
-            }
-            if (changePasswordInfo.NewPassword is null)
-            {
-                return BadRequest("New password must be provided");
-            }
-            if (changePasswordInfo.NewPassword == changePasswordInfo.OldPassword)
-            {
-                return BadRequest("New and old password must be different");
-            }
-
-            // Ennsure the user exists and everything is right (Phone number and old password match)
-            EchoUser user = await _um.FindByEmailAsync(changePasswordInfo.Email);
-            if (user is null)
-            {
-                return NotFound();
-            }
-            if (changePasswordInfo.PhoneNumber != user.PhoneNumber)
-            {
-                return BadRequest("Provided phone number does not match");
-            }
-            if (!await _um.CheckPasswordAsync(user, changePasswordInfo.OldPassword))
-            {
-                return Unauthorized();
-            }
-
-            // Change the password using a password token and try to save
-            var passwordToken = await _um.GeneratePasswordResetTokenAsync(user);
-            var identityResult = await _um.ResetPasswordAsync(user, passwordToken, changePasswordInfo.NewPassword);
-            if (identityResult.Succeeded)
-            {
-                // Save
-                await _context.SaveChangesAsync();
-
-                return NoContent();
-            }
-            else
-            {
-                return BadRequest(identityResult.Errors);
-            }
-        }
-
-        /// <summary>
         /// Creates an EchoUser
         /// </summary>
         /// <remarks>
@@ -124,7 +50,7 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
         [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] RegisterUserRequest registerUserInfo)
+        public async Task<IActionResult> PostRegister([FromBody] RegisterUserRequest registerUserInfo)
         {
             var user = new EchoUser
             {
@@ -166,15 +92,17 @@ namespace echoStudy_webAPI.Controllers
         /// <param name="registerUserInfo">Credentials of the authenticating user (Subject)</param>
         /// <response code="204">Returns no content if the user was deleted successfully</response>
         /// <response code="400">User deletion could not be completed with the given request body OR identity failed deletion</response>
+        /// <response code="401">Password is incorrect</response>
         /// <response code="404">User does not exist</response>
         [Produces("application/json")]
         [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         [HttpPost("deregister")]
         [AllowAnonymous]
-        public async Task<IActionResult> Deregister([FromBody] RegisterUserRequest registerUserInfo)
+        public async Task<IActionResult> PostDeregister([FromBody] RegisterUserRequest registerUserInfo)
         {
             // Null checks
             if(registerUserInfo.Email is null)
@@ -263,6 +191,210 @@ namespace echoStudy_webAPI.Controllers
                 await _context.SaveChangesAsync();
 
                 return NoContent();
+            }
+            else
+            {
+                return BadRequest(identityResult.Errors);
+            }
+        }
+
+        /// <summary>
+        /// Gets an echo user's public details
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="username">Username of the target user</param>
+        /// <response code="200">Returns nonsensitive, public details of a user</response>
+        /// <response code="400">Username was not provided</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpGet("{username}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserPublicInfo(string username)
+        {
+            // Grab the user
+            EchoUser user;
+            if (username is not null)
+            {
+                user = await _um.FindByNameAsync(username);
+            }
+            else
+            {
+                return BadRequest("Username is required to find the user");
+            }
+
+            // User not found
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            // Return their details
+            return Ok(new UserInfoPublicResponse
+            {
+                Username = user.UserName
+            });
+        }
+
+        /// <summary>
+        /// Updates an echo user
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="registerUserInfo">Credentials of the authenticating user. Must provide atleast username+password or email+password</param>
+        /// <response code="200">Returns the ID of the updated user</response>
+        /// <response code="400">User could not be updated with provided body OR no changes occured</response>
+        /// <response code="401">Password is incorrect</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("edituser")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PostEditUser([FromBody] RegisterUserRequest registerUserInfo)
+        {
+            // Password is always required
+            if (registerUserInfo.Password is null)
+            {
+                return BadRequest("Password must be provided");
+            }
+
+            // Ennsure the user exists and the password matches
+            EchoUser user;
+            if (registerUserInfo.Email is not null)
+            {
+                user = await _um.FindByEmailAsync(registerUserInfo.Email);
+            }
+            else if (registerUserInfo.UserName is not null)
+            {
+                user = await _um.FindByNameAsync(registerUserInfo.UserName);
+            }
+            else
+            {
+                return BadRequest("Atleast username or email must be provided to identify the user");
+            }
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (!await _um.CheckPasswordAsync(user, registerUserInfo.Password))
+            {
+                return Unauthorized();
+            }
+
+            // Change user details that differ
+            if (registerUserInfo.PhoneNumber is not null)
+            {
+                user.PhoneNumber = registerUserInfo.PhoneNumber;
+            }
+            if (registerUserInfo.UserName is not null)
+            {
+                user.UserName = registerUserInfo.UserName;
+            }
+            if (registerUserInfo.Email is not null && registerUserInfo.UserName is not null)
+            {
+                if (registerUserInfo.Email != user.Email)
+                {
+                    user.Email = registerUserInfo.Email;
+                }
+                if (registerUserInfo.UserName != user.UserName)
+                {
+                    user.UserName = registerUserInfo.UserName;
+                }
+            }
+
+            // Try to save the updated user
+            _context.Update(user);
+            int result = await _context.SaveChangesAsync();
+
+            if (result == 0)
+            {
+                return BadRequest("No changes were made");
+            }
+            else
+            {
+                return Ok(new UserUpdateResponse
+                {
+                    id = user.Id
+                });
+            }
+
+        }
+
+        /// <summary>
+        /// Changes password for given echoUser
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="changePasswordInfo"> Important credentials of the authenticating user as well as their new password (Subject)</param>
+        /// <response code="200">Returns the ID of the updated user</response>
+        /// <response code="400">The new password did not meet security requirements OR the action could not be completed with provided request body</response>
+        /// <response code="401">Password is incorrect</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("changepassword")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PostChangePassword([FromBody] ChangePasswordRequest changePasswordInfo)
+        {
+            // Null/logic checks
+            if (changePasswordInfo.Email is null)
+            {
+                return BadRequest("Email must be provided");
+            }
+            if (changePasswordInfo.PhoneNumber is null)
+            {
+                return BadRequest("Phone number must be provided");
+            }
+            if (changePasswordInfo.OldPassword is null)
+            {
+                return BadRequest("Old password must be provided");
+            }
+            if (changePasswordInfo.NewPassword is null)
+            {
+                return BadRequest("New password must be provided");
+            }
+            if (changePasswordInfo.NewPassword == changePasswordInfo.OldPassword)
+            {
+                return BadRequest("New and old password must be different");
+            }
+
+            // Ennsure the user exists and everything is right (Phone number and old password match)
+            EchoUser user = await _um.FindByEmailAsync(changePasswordInfo.Email);
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (changePasswordInfo.PhoneNumber != user.PhoneNumber)
+            {
+                return BadRequest("Provided phone number does not match");
+            }
+            if (!await _um.CheckPasswordAsync(user, changePasswordInfo.OldPassword))
+            {
+                return Unauthorized();
+            }
+
+            // Change the password using a password token and try to save
+            var passwordToken = await _um.GeneratePasswordResetTokenAsync(user);
+            var identityResult = await _um.ResetPasswordAsync(user, passwordToken, changePasswordInfo.NewPassword);
+            if (identityResult.Succeeded)
+            {
+                // Save
+                await _context.SaveChangesAsync();
+
+                return Ok(new UserUpdateResponse
+                {
+                    id = user.Id
+                });
             }
             else
             {

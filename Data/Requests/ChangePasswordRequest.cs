@@ -1,4 +1,4 @@
-﻿namespace echoStudy_webAPI.Controllers
+﻿namespace echoStudy_webAPI.Data.Requests
 {
     // Information required for changing a user's password
     public class ChangePasswordRequest

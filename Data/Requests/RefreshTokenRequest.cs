@@ -1,4 +1,4 @@
-﻿namespace echoStudy_webAPI.Controllers
+﻿namespace echoStudy_webAPI.Data.Requests
 {
     public class RefreshTokenRequest
     {
