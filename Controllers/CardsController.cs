@@ -54,7 +54,6 @@ namespace echoStudy_webAPI.Controllers
             public string backText { get; set; }
             public string frontLang { get; set; }
             public string backLang { get; set; }
-            public string userId { get; set; }
             public int? deckId { get; set; }
         }
 
@@ -255,7 +254,7 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks></remarks>
         /// <param name="id">ID of the Card to edit</param>
         /// <param name="cardInfo">
-        /// Optional: frontText, backText, frontLang, backLang, userId, deckId
+        /// Optional: frontText, backText, frontLang, backLang, deckId
         /// </param>
         /// <response code="200">Returns the Id and DateUpdated of the edited Card</response>
         /// <response code="400">Invalid input or input type</response>
@@ -320,7 +319,6 @@ namespace echoStudy_webAPI.Controllers
                         oldDeck.Cards.Remove(card);
                         oldDeck.DateUpdated = DateTime.Now;
                     }
-
                     _context.Decks.Update(oldDeck);
                     _context.Decks.Update(newDeck);
                 }
@@ -332,13 +330,6 @@ namespace echoStudy_webAPI.Controllers
                 }
             }
 
-            if (cardInfo.userId is not null)
-            {
-                EchoUser user = await _um.FindByIdAsync(cardInfo.userId);
-                if (user is null) return BadRequest("User " + cardInfo.userId + " not found");
-
-                card.UserId = user.Id;
-            }
             if (cardInfo.frontText is not null)
             {
                 card.FrontText = cardInfo.frontText;
@@ -421,10 +412,10 @@ namespace echoStudy_webAPI.Controllers
 
         // POST: /Cards
         /// <summary>
-        /// Creates a Card for a specific user
+        /// Creates a Card for the currently authenticated user
         /// </summary>
         /// <param name="cardInfo">
-        /// Required: frontText, backText, frontLang, backLang, userId, deckId
+        /// Required: frontText, backText, frontLang, backLang, deckId
         /// </param>
         /// <remarks></remarks>
         /// <response code="201">Returns the id and creation date of the created Card</response>
@@ -456,17 +447,6 @@ namespace echoStudy_webAPI.Controllers
             if (cardInfo.backLang is null)
             {
                 return BadRequest("backLang is required");
-            }
-            if (cardInfo.userId is null)
-            {
-                return BadRequest("userId is required");
-            }
-            else
-            {
-                if(cardInfo.userId != _user.Id)
-                {
-                    return Forbid();
-                }
             }
             if (cardInfo.deckId is null)
             {

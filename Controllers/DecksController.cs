@@ -43,7 +43,7 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /**
-         * This class should contain all information needed from the user to create a row in the database
+         * This class should contain all information needed from the user to create a new deck
          */
         public class PostDeckInfo
         {
@@ -52,8 +52,6 @@ namespace echoStudy_webAPI.Controllers
             public string access { get; set; }
             public string default_flang { get; set; }
             public string default_blang { get; set; }
-            public string userEmail { get; set; }
-            public string userId { get; set; }
             public List<int> cardIds { get; set; }
         }
 
@@ -206,7 +204,7 @@ namespace echoStudy_webAPI.Controllers
         /// </remarks>
         /// <param name="id">ID of the Deck to edit</param>
         /// <param name="deckInfo">
-        /// Optional: title, description, default_flang, default_blang, userId, access, cardIds
+        /// Optional: title, description, default_flang, default_blang, access, cardIds
         /// </param>
         /// <response code="200">Returns the Id and DateUpdated of the edited Deck</response>
         /// <response code="400">Invalid input or input type</response>
@@ -325,7 +323,7 @@ namespace echoStudy_webAPI.Controllers
         /// Creates a Deck for the currently authenticated user
         /// </summary>
         /// <param name="deckInfo">
-        /// Required: title, description, default_flang, default_blang, userId -- Optional: access, cardIds
+        /// Required: title, description, default_flang, default_blang -- Optional: access, cardIds
         /// </param>
         /// <remarks>Default access level is Private. The cardIds list currently does nothing.</remarks>
         /// <response code="201">Returns the id and creation date of the created Deck</response>
@@ -362,25 +360,6 @@ namespace echoStudy_webAPI.Controllers
 
             // Add owner
             deck.UserId = _user.Id;
-
-            /*
-            IQueryable<dynamic> querycards;
-            // Ensure all cards in deckInfo.cardIds exist and load them
-            if(deckInfo.cardIds is not null)
-            {
-                querycards = from c in _context.Cards
-                                 where deckInfo.cardIds.Contains(c.CardID)
-                                 select c;
-
-                if (querycards.Count() < deckInfo.cardIds.Count)
-                {
-                    List<int> cardIds = new();
-                    foreach (Card card in querycards) { cardIds.Add(card.CardID); }
-                    var querydiff = deckInfo.cardIds.Except(cardIds);
-                    return NotFound("cardIds not found: " + JsonConvert.SerializeObject(querydiff));
-                }
-            }
-            */
 
             //----------------Set the rest of the deck info
             deck.Title = deckInfo.title;
