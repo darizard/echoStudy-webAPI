@@ -1,289 +1,524 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json;
-using System;
-using static echoStudy_webAPI.Tests.CardsAPITester;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http.Headers;
-using System.Net.Http;
-using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using echoStudy_webAPI.Areas.Identity.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
+using echoStudy_webAPI.Data;
 using System.Threading.Tasks;
-using static echoStudy_webAPI.Tests.Models.Models;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Http;
+using echoStudy_webAPI.Data.Responses;
+using System;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using echoStudy_webAPI.Models;
+using System.Linq;
+using System.Collections.Generic;
+using echoStudy_webAPI.Data.Requests;
 
-namespace echoStudy_webAPI.Tests
+// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+
+namespace echoStudy_webAPI.Controllers
 {
-    [TestClass]
-    public class AuthAPITester
+    //auth controller endpoints work from the base application URL
+    [Route("")]
+    [ApiController]
+    public class AuthController : ControllerBase
     {
-        public HttpClient client;
-        public bool testDevelopment = true;
+        private static UserManager<EchoUser> _um;
+        private readonly IJwtAuthenticationManager _jwtManager;
+        private readonly EchoStudyDB _context;
 
-        public AuthAPITester()
+        public AuthController(UserManager<EchoUser> um,
+                              IJwtAuthenticationManager jwtManager,
+                              EchoStudyDB context)
         {
-            if (testDevelopment)
+            _um = um;
+            _jwtManager = jwtManager;
+            _context = context;
+        }
+
+        /// <summary>
+        /// Generates and produces a JSON Web Token object for use in
+        /// authentication and authorization for subsequent API calls.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="userCreds">Credentials of the authenticating user (Subject)</param>
+        /// <response code="200">Returns the JSON Web Token object</response>
+        /// <response code="401">Invalids User Credentials were provided</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [HttpPost("authenticate")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Authenticate([FromBody] UserCreds userCreds = null)
+        {
+            AuthenticationResponse authResponse;
+            Console.WriteLine("break here");
+            if (userCreds.username.IsNullOrEmpty() && userCreds.password.IsNullOrEmpty())
             {
-                client = new HttpClient();
-                client.BaseAddress = new Uri("https://localhost:44397/");
+                authResponse = await _jwtManager.AuthenticateUserAsync(null);
+                return Ok(authResponse);
+            }
+            EchoUser user = await _um.FindByEmailAsync(userCreds.username.ToUpper());
+            if (!await _um.CheckPasswordAsync(user, userCreds.password)
+                || user == null)
+            {
+                return Unauthorized();
+            }
+
+            authResponse = await _jwtManager.AuthenticateUserAsync(user);
+            return Ok(authResponse);
+        }
+
+        /// <summary>
+        /// Refreshes the provided JWT
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="request">Access and refresh token pair to be refreshed</param>
+        /// <response code="200">Returns the JSON Web Token object</response>
+        /// <response code="400">Invalid token</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+        {
+            var response = await _jwtManager.RefreshTokenAsync(request.Token, request.RefreshToken);
+
+            if (response == null)
+            {
+                return BadRequest();
+            }
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Creates an EchoUser
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="registerUserInfo">Credentials of the authenticating user (Subject)</param>
+        /// <response code="200">Returns the ID of the newly created user</response>
+        /// <response code="400">User registration could not be completed with the given request body</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(RegisterUserSuccess), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PostRegister([FromBody] RegisterUserRequest registerUserInfo)
+        {
+            var user = new EchoUser
+            {
+                UserName = registerUserInfo.UserName,
+                Email = registerUserInfo.Email,
+                PhoneNumber = registerUserInfo.PhoneNumber
+            };
+            var identityResult = await _um.CreateAsync(user, registerUserInfo.Password);
+            if(identityResult.Succeeded)
+            {
+                return Ok(new RegisterUserSuccess
+                {
+                    Id = user.Id
+                });
             }
             else
             {
-                var handler = new HttpClientHandler();
-                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                handler.ServerCertificateCustomValidationCallback =
-                (httpRequestMessage, cert, cetChain, policyErrors) =>
-                {
-                    return true;
-                };
-
-                client = new HttpClient(handler);
-                client.BaseAddress = new Uri("http://api.echostudy.com/");
+                return BadRequest(identityResult.Errors);
             }
 
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
+
+            /*
+            EchoUser user = await _um.FindByEmailAsync(userCreds.username.ToUpper());
+            if (!await _um.CheckPasswordAsync(user, userCreds.password)
+                || user == null)
+            {
+                return Unauthorized();
+            }
+
+            var authResponse = await _jwtManager.AuthenticateUserAsync(user);
+            return Ok(authResponse);*/
         }
 
-        /**
-        * Tests the POST edituser endpoint with all possible types of requests
-        */
-        [TestMethod]
-        public async Task PostEditUserTest()
+        /// <summary>
+        /// Deletes an EchoUser and all of their content
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="registerUserInfo">Credentials of the authenticating user (Subject)</param>
+        /// <response code="204">Returns no content if the user was deleted successfully</response>
+        /// <response code="400">User deletion could not be completed with the given request body OR identity failed deletion</response>
+        /// <response code="401">Password is incorrect</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("deregister")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PostDeregister([FromBody] RegisterUserRequest registerUserInfo)
         {
-            RegisterUserRequest registerUserRequest = new RegisterUserRequest();
-            registerUserRequest.Email = "echotestuser12345@gmail.com";
-            registerUserRequest.Password = "123ABC!@#def";
-            registerUserRequest.PhoneNumber = "123-456-7890";
-            registerUserRequest.UserName = "echotestuser12345";
-
-            HttpContent userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync("register", userContent);
-
-            if (response.IsSuccessStatusCode)
+            // Null checks
+            if(registerUserInfo.Email is null)
             {
-                registerUserRequest.PhoneNumber = "0";
-                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
-                response = await client.PostAsync("edituser", userContent);
-                if (!response.IsSuccessStatusCode)
+                return BadRequest("Email must be provided");
+            }
+            if (registerUserInfo.Password is null)
+            {
+                return BadRequest("Password must be provided");
+            }
+            if (registerUserInfo.PhoneNumber is null)
+            {
+                return BadRequest("Phone number must be provided");
+            }
+            if (registerUserInfo.UserName is null)
+            {
+                return BadRequest("Username must be provided");
+            }
+
+            // Ennsure the user exists and everything is right
+            EchoUser user = await _um.FindByEmailAsync(registerUserInfo.Email);
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (!await _um.CheckPasswordAsync(user, registerUserInfo.Password))
+            {
+                return Unauthorized();
+            }
+            if(registerUserInfo.PhoneNumber != user.PhoneNumber)
+            {
+                return BadRequest("Provided phone number does not match");
+            }
+            if (user.UserName.ToLower() != registerUserInfo.UserName.ToLower())
+            {
+                return BadRequest("Provided username does not match");
+            }
+
+            // Try to delete the user
+            var identityResult = await _um.DeleteAsync(user);
+            if (identityResult.Succeeded)
+            {
+                // User was deleted, now delete all of their data
+
+                // Categories
+                var categoryQuery = from dc in _context.DeckCategories
+                            where dc.UserId == user.Id
+                            select dc;
+                List<DeckCategory> deckCategories = await categoryQuery.ToListAsync();
+                foreach (DeckCategory deckCategory in deckCategories)
                 {
-                    Assert.Fail("Failed to edit user");
+                    _context.DeckCategories.Remove(deckCategory);
                 }
 
-                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
-                response = await client.PostAsync("deregister", userContent);
-                if (!response.IsSuccessStatusCode)
+                // Decks
+                var deckQuery = from d in _context.Decks
+                        where d.UserId == user.Id
+                        select d;
+                List<Deck> decks = await deckQuery.ToListAsync();
+                foreach (Deck deck in decks)
                 {
-                    Assert.Fail("Failed to delete edited user");
+                    _context.Decks.Remove(deck);
                 }
+
+                // Cards
+                var cardQuery = from c in _context.Cards
+                                where c.UserId == user.Id
+                                select c;
+                List<Card> cards = await cardQuery.ToListAsync();
+                foreach (Card card in cards)
+                {
+                    _context.Cards.Remove(card);
+                }
+
+                // Tokens
+                var tokenQuery = from t in _context.RefreshTokens
+                                where t.UserId == user.Id
+                                select t;
+                List<RefreshToken> tokens = await tokenQuery.ToListAsync();
+                foreach (RefreshToken refreshToken in tokens)
+                {
+                    _context.RefreshTokens.Remove(refreshToken);
+                }
+
+                // Save
+                await _context.SaveChangesAsync();
+
+                return NoContent();
             }
             else
             {
-                Assert.Fail("Failed to register user");
+                return BadRequest(identityResult.Errors);
             }
         }
 
-        /**
-        * Tests the POST changepassword endpoint with all possible types of requests
-        */
-        [TestMethod]
-        public async Task PostChangePasswordTest()
+        /// <summary>
+        /// Changes password for given echoUser
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="changePasswordInfo"> Important credentials of the authenticating user as well as their new password (Subject)</param>
+        /// <response code="200">Returns the ID of the updated user</response>
+        /// <response code="400">The new password did not meet security requirements OR the action could not be completed with provided request body</response>
+        /// <response code="401">Password is incorrect</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(IdentityError[]), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("changepassword")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PostChangePassword([FromBody] ChangePasswordRequest changePasswordInfo)
         {
-            RegisterUserRequest registerUserRequest = new RegisterUserRequest();
-            registerUserRequest.Email = "echotestuser12345@gmail.com";
-            registerUserRequest.Password = "123ABC!@#def";
-            registerUserRequest.PhoneNumber = "123-456-7890";
-            registerUserRequest.UserName = "echotestuser12345";
-
-            HttpContent userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync("register", userContent);
-
-            if (response.IsSuccessStatusCode)
+            // Null/logic checks
+            if (changePasswordInfo.Email is null)
             {
-                ChangePasswordRequest changePasswordRequest = new ChangePasswordRequest();
-                changePasswordRequest.Email = "echotestuser12345@gmail.com";
-                changePasswordRequest.OldPassword = "123ABC!@#def";
-                changePasswordRequest.NewPassword = "NewPassword123!@#";
-                changePasswordRequest.PhoneNumber = "123-456-7890";
+                return BadRequest("Email must be provided");
+            }
+            if (changePasswordInfo.PhoneNumber is null)
+            {
+                return BadRequest("Phone number must be provided");
+            }
+            if (changePasswordInfo.OldPassword is null)
+            {
+                return BadRequest("Old password must be provided");
+            }
+            if (changePasswordInfo.NewPassword is null)
+            {
+                return BadRequest("New password must be provided");
+            }
+            if (changePasswordInfo.NewPassword == changePasswordInfo.OldPassword)
+            {
+                return BadRequest("New and old password must be different");
+            }
 
-                userContent = new StringContent(JsonConvert.SerializeObject(changePasswordRequest), Encoding.UTF8, "application/json");
-                response = await client.PostAsync("changepassword", userContent);
+            // Ennsure the user exists and everything is right (Phone number and old password match)
+            EchoUser user = await _um.FindByEmailAsync(changePasswordInfo.Email);
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (changePasswordInfo.PhoneNumber != user.PhoneNumber)
+            {
+                return BadRequest("Provided phone number does not match");
+            }
+            if (!await _um.CheckPasswordAsync(user, changePasswordInfo.OldPassword))
+            {
+                return Unauthorized();
+            }
 
-                if (!response.IsSuccessStatusCode)
+            // Change the password using a password token and try to save
+            var passwordToken = await _um.GeneratePasswordResetTokenAsync(user);
+            var identityResult = await _um.ResetPasswordAsync(user, passwordToken, changePasswordInfo.NewPassword);
+            if (identityResult.Succeeded)
+            {
+                // Save
+                await _context.SaveChangesAsync();
+
+                return Ok(new UserUpdateResponse
                 {
-                    Assert.Fail("Request failed to change password");
-                }
-
-                registerUserRequest.Password = "NewPassword123!@#";
-                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
-                response = await client.PostAsync("deregister", userContent);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Assert.Fail("Failed to deregister user with new password");
-                }
+                    id = user.Id
+                });
             }
             else
             {
-                Assert.Fail("Failed to register user");
+                return BadRequest(identityResult.Errors);
             }
         }
 
-        /**
-        * Tests the POST register and POST delete endpoint with all possible types of requests
-        */
-        [TestMethod]
-        public async Task PostRegisterDeregisterTest()
+
+        /// <summary>
+        /// Retrieves all of a user's information
+        /// </summary>
+        /// <remarks>
+        /// User authentication is encoded in the JSON Web Token provided in the Authorization header
+        /// </remarks>
+        /// <response code="200">Returns the user's data</response>
+        /// <response code="400">Token was not provided</response>
+        /// <response code="500">Token was invalid</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserInfoResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status500InternalServerError)]
+        [HttpGet("users")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserInfo()
         {
-            RegisterUserRequest registerUserRequest = new RegisterUserRequest();
-            registerUserRequest.Email = "echotestuser12345@gmail.com";
-            registerUserRequest.Password = "123ABC!@#def";
-            registerUserRequest.PhoneNumber = "123-456-7890";
-            registerUserRequest.UserName = "echotestuser12345";
-
-            HttpContent userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync("register", userContent);
-
-            if (response.IsSuccessStatusCode)
+            // Ensure something is in the authorization header
+            string[] authHeader = Request.Headers["Authorization"].ToString().Split(' ');
+            if (authHeader.Length < 2)
             {
-                // Attempt to get a token
-                UserInfo userDetails = new UserInfo();
-                userDetails.username = registerUserRequest.Email;
-                userDetails.password = registerUserRequest.Password;
+                return BadRequest("JSON Web Token in the authorization header required for this endpoint");
+            }
+            var token = new JwtSecurityToken(authHeader[1]);
+            EchoUser user = await _um.FindByIdAsync(token.Subject);
 
-                // Get the token from the server
-                HttpContent signInContent = new StringContent(JsonConvert.SerializeObject(userDetails), Encoding.UTF8, "application/json");
-                response = await client.PostAsync("authenticate", signInContent);
+            // Return their data
+            return Ok(new UserInfoResponse
+            {
+                Email = user.Email,
+                Username = user.UserName,
+                PhoneNumber = user.PhoneNumber
+            });
+        }
 
-                // Should be a successful request
-                if (response.IsSuccessStatusCode)
+        /// <summary>
+        /// Gets an echo user's public details through provided username or email
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="username">Username OR email of the target user</param>
+        /// <response code="200">Returns nonsensitive, public details of a user</response>
+        /// <response code="400">Username was not provided</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpGet("users/{username}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserPublicInfo(string username)
+        {
+            // Grab the user
+            EchoUser user;
+            if (username is not null)
+            {
+                if (username.Contains('@'))
                 {
-                    // Parse the response
-                    authResponse userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
-
-                    // Make sure the token can be parsed
-                    var handler = new JwtSecurityTokenHandler();
-                    var jwtSecurityToken = handler.ReadJwtToken(userToken.Token);
-
-                    // Make sure the refresh token works
-                    HttpContent refreshContent = new StringContent(JsonConvert.SerializeObject(userToken), Encoding.UTF8, "application/json");
-                    response = await client.PostAsync("refresh", refreshContent);
-                    if (response.IsSuccessStatusCode)
-                    {
-                        // Parse the response
-                        userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
-
-                        // Make sure the token can be parsed
-                        var jwtRefreshedSecurityToken = handler.ReadJwtToken(userToken.Token);
-                    }
-                    else
-                    {
-                        Assert.Fail("Valid Post Refresh request failed to grab user token");
-                    }
+                    user = await _um.FindByEmailAsync(username);
                 }
                 else
                 {
-                    Assert.Fail("Valid Post Authenticate request failed to grab a valid user");
-                }
-
-                userContent = new StringContent(JsonConvert.SerializeObject(registerUserRequest), Encoding.UTF8, "application/json");
-                response = await client.PostAsync("deregister", userContent);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Assert.Fail("Failed to delete registered user");
+                    user = await _um.FindByNameAsync(username);
                 }
             }
             else
             {
-                Assert.Fail("Failed to register user");
+                return BadRequest("Username is required to find the user");
             }
+
+            // User not found
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            // Return their details
+            return Ok(new UserInfoPublicResponse
+            {
+                Username = user.UserName
+            });
         }
 
-        /**
-        * Tests the POST authenticate and POST refresh endpoint with all possible types of requests
-        */
-        [TestMethod]
-        public async Task PostAuthorizationRefreshTest()
+        /// <summary>
+        /// Updates an echo user
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="registerUserInfo">Credentials of the authenticating user. Must provide atleast username+password or email+password</param>
+        /// <response code="200">Returns the ID of the updated user</response>
+        /// <response code="400">User could not be updated with provided body OR no changes occured</response>
+        /// <response code="401">Password is incorrect</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("users")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PostEditUser([FromBody] RegisterUserRequest registerUserInfo)
         {
-            // The valid user
-            UserInfo userDetails = new UserInfo();
-            userDetails.username = "JohnDoe@gmail.com";
-            userDetails.password = "123ABC!@#def";
-
-            // Get the token from the server
-            HttpContent signInContent = new StringContent(JsonConvert.SerializeObject(userDetails), Encoding.UTF8, "application/json");
-            HttpResponseMessage response = await client.PostAsync("authenticate", signInContent);
-
-            // Should be a successful request
-            if (response.IsSuccessStatusCode)
+            // Password is always required
+            if (registerUserInfo.Password is null)
             {
-                // Parse the response
-                authResponse userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
+                return BadRequest("Password must be provided");
+            }
 
-                // Make sure the token can be parsed
-                var handler = new JwtSecurityTokenHandler();
-                var jwtSecurityToken = handler.ReadJwtToken(userToken.Token);
-
-                // Make sure the refresh token works
-                HttpContent refreshContent = new StringContent(JsonConvert.SerializeObject(userToken), Encoding.UTF8, "application/json");
-                response = await client.PostAsync("refresh", refreshContent);
-                if (response.IsSuccessStatusCode)
-                {
-                    // Parse the response
-                    userToken = JsonConvert.DeserializeObject<authResponse>(await response.Content.ReadAsStringAsync());
-
-                    // Make sure the token can be parsed
-                    var jwtRefreshedSecurityToken = handler.ReadJwtToken(userToken.Token);
-                }
-                else
-                {
-                    Assert.Fail("Valid Post Refresh request failed to grab user token");
-                }
+            // Ennsure the user exists and the password matches
+            EchoUser user;
+            if (registerUserInfo.Email is not null)
+            {
+                user = await _um.FindByEmailAsync(registerUserInfo.Email);
+            }
+            else if (registerUserInfo.UserName is not null)
+            {
+                user = await _um.FindByNameAsync(registerUserInfo.UserName);
             }
             else
             {
-                Assert.Fail("Valid Post Authenticate request failed to grab a valid user");
+                return BadRequest("Atleast username or email must be provided to identify the user");
+            }
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (!await _um.CheckPasswordAsync(user, registerUserInfo.Password))
+            {
+                return Unauthorized();
             }
 
-            // The invalid user
-            userDetails.username = "nonsense234567@gmail.com";
-            userDetails.password = "iamnotreal";
-
-            // Attempt to get a token from the server
-            signInContent = new StringContent(JsonConvert.SerializeObject(userDetails), Encoding.UTF8, "application/json");
-            response = await client.PostAsync("authenticate", signInContent);
-
-            // Should be an unsuccessful request
-            if (response.IsSuccessStatusCode)
+            // Change user details that differ
+            if (registerUserInfo.PhoneNumber is not null)
             {
-                Assert.Fail("Invalid Post Authenticate succeeded in grabbing an invalid user");
+                user.PhoneNumber = registerUserInfo.PhoneNumber;
             }
-            else
+            if (registerUserInfo.UserName is not null)
             {
-                if(response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
+                user.UserName = registerUserInfo.UserName;
+            }
+            if (registerUserInfo.Email is not null && registerUserInfo.UserName is not null)
+            {
+                if (registerUserInfo.Email != user.Email)
                 {
-                    Assert.Fail("Post Authenticate does not return unauthorized upon failure");
+                    user.Email = registerUserInfo.Email;
+                }
+                if (registerUserInfo.UserName != user.UserName)
+                {
+                    user.UserName = registerUserInfo.UserName;
                 }
             }
 
-            // Attempt to get a refresh token with bogus content
-            authResponse fakeToken = new authResponse();
-            fakeToken.RefreshToken = "2803cxr4xnm8940";
-            fakeToken.Token = "293s0jx002m3mcx-z0wk0ak";
-            signInContent = new StringContent(JsonConvert.SerializeObject(fakeToken), Encoding.UTF8, "application/json");
-            response = await client.PostAsync("refresh", signInContent);
+            // Try to save the updated user
+            _context.Update(user);
+            int result = await _context.SaveChangesAsync();
 
-            // Should be an unsuccessful request
-            if (response.IsSuccessStatusCode)
+            if (result == 0)
             {
-                Assert.Fail("Invalid Post Refresh succeeded in grabbing an invalid user");
+                return BadRequest("No changes were made");
             }
             else
             {
-                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+                return Ok(new UserUpdateResponse
                 {
-                    Assert.Fail("Post Refresh does not return unauthorized upon failure");
-                }
+                    id = user.Id
+                });
             }
+
+        }
+
+        // GET: /Authenticate
+        // If the supplied token is valid, returns the decoded JWT.
+        // This endpoint currently exists for testing purposes.
+        // Required headers:
+        //      Host: <host>
+        //      Authorization: Bearer <token>
+        [HttpGet("authenticate")]
+        public string Get()
+        {
+
+            var tokenAuthHeader = Request.Headers["Authorization"];
+            string encodedToken = tokenAuthHeader.ToString().Split(' ')[1];
+            var token = new JwtSecurityToken(encodedToken);
+
+            return token.ToString();
         }
     }
 }
