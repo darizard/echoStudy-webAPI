@@ -38,6 +38,65 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /// <summary>
+        /// Generates and produces a JSON Web Token object for use in
+        /// authentication and authorization for subsequent API calls.
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="userCreds">Credentials of the authenticating user (Subject)</param>
+        /// <response code="200">Returns the JSON Web Token object</response>
+        /// <response code="401">Invalids User Credentials were provided</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [HttpPost("authenticate")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Authenticate([FromBody] UserCreds userCreds = null)
+        {
+            AuthenticationResponse authResponse;
+            Console.WriteLine("break here");
+            if (userCreds.username.IsNullOrEmpty() && userCreds.password.IsNullOrEmpty())
+            {
+                authResponse = await _jwtManager.AuthenticateUserAsync(null);
+                return Ok(authResponse);
+            }
+            EchoUser user = await _um.FindByEmailAsync(userCreds.username.ToUpper());
+            if (!await _um.CheckPasswordAsync(user, userCreds.password)
+                || user == null)
+            {
+                return Unauthorized();
+            }
+
+            authResponse = await _jwtManager.AuthenticateUserAsync(user);
+            return Ok(authResponse);
+        }
+
+        /// <summary>
+        /// Refreshes the provided JWT
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="request">Access and refresh token pair to be refreshed</param>
+        /// <response code="200">Returns the JSON Web Token object</response>
+        /// <response code="400">Invalid token</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+        {
+            var response = await _jwtManager.RefreshTokenAsync(request.Token, request.RefreshToken);
+
+            if (response == null)
+            {
+                return BadRequest();
+            }
+
+            return Ok(response);
+        }
+
+        /// <summary>
         /// Creates an EchoUser
         /// </summary>
         /// <remarks>
@@ -199,134 +258,6 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /// <summary>
-        /// Gets an echo user's public details
-        /// </summary>
-        /// <remarks>
-        /// </remarks>
-        /// <param name="username">Username of the target user</param>
-        /// <response code="200">Returns nonsensitive, public details of a user</response>
-        /// <response code="400">Username was not provided</response>
-        /// <response code="404">User does not exist</response>
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        [HttpGet("{username}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetUserPublicInfo(string username)
-        {
-            // Grab the user
-            EchoUser user;
-            if (username is not null)
-            {
-                user = await _um.FindByNameAsync(username);
-            }
-            else
-            {
-                return BadRequest("Username is required to find the user");
-            }
-
-            // User not found
-            if (user is null)
-            {
-                return NotFound();
-            }
-
-            // Return their details
-            return Ok(new UserInfoPublicResponse
-            {
-                Username = user.UserName
-            });
-        }
-
-        /// <summary>
-        /// Updates an echo user
-        /// </summary>
-        /// <remarks>
-        /// </remarks>
-        /// <param name="registerUserInfo">Credentials of the authenticating user. Must provide atleast username+password or email+password</param>
-        /// <response code="200">Returns the ID of the updated user</response>
-        /// <response code="400">User could not be updated with provided body OR no changes occured</response>
-        /// <response code="401">Password is incorrect</response>
-        /// <response code="404">User does not exist</response>
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(UserUpdateResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        [HttpPost("edituser")]
-        [AllowAnonymous]
-        public async Task<IActionResult> PostEditUser([FromBody] RegisterUserRequest registerUserInfo)
-        {
-            // Password is always required
-            if (registerUserInfo.Password is null)
-            {
-                return BadRequest("Password must be provided");
-            }
-
-            // Ennsure the user exists and the password matches
-            EchoUser user;
-            if (registerUserInfo.Email is not null)
-            {
-                user = await _um.FindByEmailAsync(registerUserInfo.Email);
-            }
-            else if (registerUserInfo.UserName is not null)
-            {
-                user = await _um.FindByNameAsync(registerUserInfo.UserName);
-            }
-            else
-            {
-                return BadRequest("Atleast username or email must be provided to identify the user");
-            }
-            if (user is null)
-            {
-                return NotFound();
-            }
-            if (!await _um.CheckPasswordAsync(user, registerUserInfo.Password))
-            {
-                return Unauthorized();
-            }
-
-            // Change user details that differ
-            if (registerUserInfo.PhoneNumber is not null)
-            {
-                user.PhoneNumber = registerUserInfo.PhoneNumber;
-            }
-            if (registerUserInfo.UserName is not null)
-            {
-                user.UserName = registerUserInfo.UserName;
-            }
-            if (registerUserInfo.Email is not null && registerUserInfo.UserName is not null)
-            {
-                if (registerUserInfo.Email != user.Email)
-                {
-                    user.Email = registerUserInfo.Email;
-                }
-                if (registerUserInfo.UserName != user.UserName)
-                {
-                    user.UserName = registerUserInfo.UserName;
-                }
-            }
-
-            // Try to save the updated user
-            _context.Update(user);
-            int result = await _context.SaveChangesAsync();
-
-            if (result == 0)
-            {
-                return BadRequest("No changes were made");
-            }
-            else
-            {
-                return Ok(new UserUpdateResponse
-                {
-                    id = user.Id
-                });
-            }
-
-        }
-
-        /// <summary>
         /// Changes password for given echoUser
         /// </summary>
         /// <remarks>
@@ -402,38 +333,159 @@ namespace echoStudy_webAPI.Controllers
             }
         }
 
+
         /// <summary>
-        /// Generates and produces a JSON Web Token object for use in
-        /// authentication and authorization for subsequent API calls.
+        /// Retrieves all of a user's information
         /// </summary>
         /// <remarks>
         /// </remarks>
-        /// <param name="userCreds">Credentials of the authenticating user (Subject)</param>
-        /// <response code="200">Returns the JSON Web Token object</response>
-        /// <response code="401">Invalids User Credentials were provided</response>
+        /// <response code="200">Returns nonsensitive, public details of a user</response>
+        /// <response code="400">Username was not provided</response>
+        /// <response code="404">User does not exist</response>
         [Produces("application/json")]
-        [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
-        [HttpPost("authenticate")]
+        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpGet("users")]
         [AllowAnonymous]
-        public async Task<IActionResult> Authenticate([FromBody] UserCreds userCreds = null)
+        public async Task<IActionResult> GetUserInfo()
         {
-            AuthenticationResponse authResponse;
-            Console.WriteLine("break here");
-            if(userCreds.username.IsNullOrEmpty() && userCreds.password.IsNullOrEmpty())
+            return null;
+        }
+
+        /// <summary>
+        /// Gets an echo user's public details through provided username or email
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="username">Username OR email of the target user</param>
+        /// <response code="200">Returns nonsensitive, public details of a user</response>
+        /// <response code="400">Username was not provided</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpGet("users/{username}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserPublicInfo(string username)
+        {
+            // Grab the user
+            EchoUser user;
+            if (username is not null)
             {
-                authResponse = await _jwtManager.AuthenticateUserAsync(null);
-                return Ok(authResponse);
+                if (username.Contains('@'))
+                {
+                    user = await _um.FindByEmailAsync(username);
+                }
+                else
+                {
+                    user = await _um.FindByNameAsync(username);
+                }
             }
-            EchoUser user = await _um.FindByEmailAsync(userCreds.username.ToUpper());
-            if (!await _um.CheckPasswordAsync(user, userCreds.password) 
-                || user == null)
+            else
+            {
+                return BadRequest("Username is required to find the user");
+            }
+
+            // User not found
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            // Return their details
+            return Ok(new UserInfoPublicResponse
+            {
+                Username = user.UserName
+            });
+        }
+
+        /// <summary>
+        /// Updates an echo user
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="registerUserInfo">Credentials of the authenticating user. Must provide atleast username+password or email+password</param>
+        /// <response code="200">Returns the ID of the updated user</response>
+        /// <response code="400">User could not be updated with provided body OR no changes occured</response>
+        /// <response code="401">Password is incorrect</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpPost("users")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PostEditUser([FromBody] RegisterUserRequest registerUserInfo)
+        {
+            // Password is always required
+            if (registerUserInfo.Password is null)
+            {
+                return BadRequest("Password must be provided");
+            }
+
+            // Ennsure the user exists and the password matches
+            EchoUser user;
+            if (registerUserInfo.Email is not null)
+            {
+                user = await _um.FindByEmailAsync(registerUserInfo.Email);
+            }
+            else if (registerUserInfo.UserName is not null)
+            {
+                user = await _um.FindByNameAsync(registerUserInfo.UserName);
+            }
+            else
+            {
+                return BadRequest("Atleast username or email must be provided to identify the user");
+            }
+            if (user is null)
+            {
+                return NotFound();
+            }
+            if (!await _um.CheckPasswordAsync(user, registerUserInfo.Password))
             {
                 return Unauthorized();
             }
 
-            authResponse = await _jwtManager.AuthenticateUserAsync(user);
-            return Ok(authResponse);
+            // Change user details that differ
+            if (registerUserInfo.PhoneNumber is not null)
+            {
+                user.PhoneNumber = registerUserInfo.PhoneNumber;
+            }
+            if (registerUserInfo.UserName is not null)
+            {
+                user.UserName = registerUserInfo.UserName;
+            }
+            if (registerUserInfo.Email is not null && registerUserInfo.UserName is not null)
+            {
+                if (registerUserInfo.Email != user.Email)
+                {
+                    user.Email = registerUserInfo.Email;
+                }
+                if (registerUserInfo.UserName != user.UserName)
+                {
+                    user.UserName = registerUserInfo.UserName;
+                }
+            }
+
+            // Try to save the updated user
+            _context.Update(user);
+            int result = await _context.SaveChangesAsync();
+
+            if (result == 0)
+            {
+                return BadRequest("No changes were made");
+            }
+            else
+            {
+                return Ok(new UserUpdateResponse
+                {
+                    id = user.Id
+                });
+            }
+
         }
 
         // GET: /Authenticate
@@ -451,31 +503,6 @@ namespace echoStudy_webAPI.Controllers
             var token = new JwtSecurityToken(encodedToken);
 
             return token.ToString();
-        }
-
-        /// <summary>
-        /// Refreshes the provided JWT
-        /// </summary>
-        /// <remarks>
-        /// </remarks>
-        /// <param name="request">Access and refresh token pair to be refreshed</param>
-        /// <response code="200">Returns the JSON Web Token object</response>
-        /// <response code="400">Invalid token</response>
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [HttpPost("refresh")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
-        {
-            var response = await _jwtManager.RefreshTokenAsync(request.Token, request.RefreshToken);
-
-            if(response == null)
-            {
-                return BadRequest();
-            }
-
-            return Ok(response);
         }
     }
 }
