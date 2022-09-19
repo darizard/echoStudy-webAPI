@@ -346,7 +346,7 @@ namespace echoStudy_webAPI.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(UserInfoResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpGet("users")]
         [AllowAnonymous]
         public async Task<IActionResult> GetUserInfo()
