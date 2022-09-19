@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -74,7 +74,6 @@ namespace echoStudy_webAPI.Tests.Models
             public string backText { get; set; }
             public string frontLang { get; set; }
             public string backLang { get; set; }
-            public string userId { get; set; }
             public int? deckId { get; set; }
         }
 
@@ -109,6 +108,31 @@ namespace echoStudy_webAPI.Tests.Models
             public string default_blang { get; set; }
             public string userId { get; set; }
             public List<int> cardIds { get; set; }
+        }
+
+        // information used in creating a new user
+        public class RegisterUserRequest
+        {
+            public string UserName { get; set; }
+            public string Email { get; set; }
+            public string Password { get; set; }
+            public string PhoneNumber { get; set; }
+        }
+
+        // Information required for changing a user's password
+        public class ChangePasswordRequest
+        {
+            public string Email { get; set; }
+            public string PhoneNumber { get; set; }
+            public string OldPassword { get; set; }
+            public string NewPassword { get; set; }
+        }
+
+        public class UserInfoResponse
+        {
+            public string Username { get; set; }
+            public string Email { get; set; }
+            public string PhoneNumber { get; set; }
         }
     }
 }
