@@ -140,6 +140,56 @@ namespace echoStudy_webAPI.Controllers
             return Ok(await query.ToListAsync());
         }
 
+        // ******TODO: Does not depend at all on current user. Move to a "Public" controller?
+        // GET: /Decks/Public
+        /// <summary>
+        /// Retrieves a user's public decks through email or username
+        /// </summary>
+        /// <param name="user">Email or username of the target user</param>
+        /// <response code="200">Returns the user's Public Deck objects</response>
+        /// <response code="401">User was not found</response>
+        [HttpGet("Public/{user}")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicUserDecks(string user)
+        {
+            // Try to find the user
+            EchoUser target = null;
+            if (user.Contains('@'))
+            {
+                target = await _um.FindByEmailAsync(user);
+            }
+            else
+            {
+                target = await _um.FindByNameAsync(user);
+            }
+
+            // Was the user found?
+            if(target is null)
+            {
+                return NotFound();
+            }
+
+            var query = from d in _context.Decks
+                        where d.UserId == target.Id && d.Access == Access.Public
+                        select new DeckInfo
+                        {
+                            id = d.DeckID,
+                            title = d.Title,
+                            description = d.Description,
+                            access = d.Access.ToString(),
+                            default_flang = d.DefaultFrontLang.ToString(),
+                            default_blang = d.DefaultBackLang.ToString(),
+                            cards = d.Cards.Select(c => c.CardID).ToList(),
+                            ownerId = d.UserId,
+                            date_created = d.DateCreated,
+                            date_touched = d.DateTouched,
+                            date_updated = d.DateUpdated
+                        };
+            return Ok(await query.ToListAsync());
+        }
+
         // GET: /Decks/{id}
         /// <summary>
         /// Retrieves one Deck specified by Id. Cannot be used to retrieve a public deck. See Public controller.

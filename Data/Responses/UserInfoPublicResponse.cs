@@ -1,6 +1,6 @@
 ﻿namespace echoStudy_webAPI.Data.Responses
 {
-    // Information required for viewing a user's public profile
+    // User information that one may want to see on a public profile
     public class UserInfoPublicResponse
     {
         public string Username { get; set; }

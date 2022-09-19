@@ -14,6 +14,7 @@ using echoStudy_webAPI.Models;
 using System.Linq;
 using System.Collections.Generic;
 using echoStudy_webAPI.Data.Requests;
+using static echoStudy_webAPI.Controllers.DecksController;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -333,9 +334,8 @@ namespace echoStudy_webAPI.Controllers
             }
         }
 
-
         /// <summary>
-        /// Retrieves all of a user's information
+        /// Retrieves all of the logged in user's information
         /// </summary>
         /// <remarks>
         /// User authentication is encoded in the JSON Web Token provided in the Authorization header
@@ -370,59 +370,11 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /// <summary>
-        /// Gets an echo user's public details through provided username or email
-        /// </summary>
-        /// <remarks>
-        /// </remarks>
-        /// <param name="username">Username OR email of the target user</param>
-        /// <response code="200">Returns nonsensitive, public details of a user</response>
-        /// <response code="400">Username was not provided</response>
-        /// <response code="404">User does not exist</response>
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        [HttpGet("users/{username}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetUserPublicInfo(string username)
-        {
-            // Grab the user
-            EchoUser user;
-            if (username is not null)
-            {
-                if (username.Contains('@'))
-                {
-                    user = await _um.FindByEmailAsync(username);
-                }
-                else
-                {
-                    user = await _um.FindByNameAsync(username);
-                }
-            }
-            else
-            {
-                return BadRequest("Username is required to find the user");
-            }
-
-            // User not found
-            if (user is null)
-            {
-                return NotFound();
-            }
-
-            // Return their details
-            return Ok(new UserInfoPublicResponse
-            {
-                Username = user.UserName
-            });
-        }
-
-        /// <summary>
         /// Updates an echo user
         /// </summary>
         /// <remarks>
         /// </remarks>
-        /// <param name="registerUserInfo">Credentials of the authenticating user. Must provide atleast username+password or email+password</param>
+        /// <param name="registerUserInfo">Credentials of the authenticating user as well as any info to be changed</param>
         /// <response code="200">Returns the ID of the updated user</response>
         /// <response code="400">User could not be updated with provided body OR no changes occured</response>
         /// <response code="401">Password is incorrect</response>
@@ -501,7 +453,75 @@ namespace echoStudy_webAPI.Controllers
                     id = user.Id
                 });
             }
+        }
 
+        /// <summary>
+        /// Retrieves an echo user's public details through provided username or email
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="username">Username OR email of the target user</param>
+        /// <response code="200">Returns nonsensitive, public details of a user</response>
+        /// <response code="400">Username was not provided</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpGet("users/{username}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserPublicInfo(string username)
+        {
+            // Grab the user
+            EchoUser user;
+            if (username is not null)
+            {
+                if (username.Contains('@'))
+                {
+                    user = await _um.FindByEmailAsync(username);
+                }
+                else
+                {
+                    user = await _um.FindByNameAsync(username);
+                }
+            }
+            else
+            {
+                return BadRequest("Username is required to find the user");
+            }
+
+            // User not found
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            // Return their details
+            return Ok(new UserInfoPublicResponse
+            {
+                Username = user.UserName
+            });
+        }
+
+        /// <summary>
+        /// Retrieves a list of all usernames
+        /// </summary>
+        /// <response code="200">Returns a list of all usernames</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IQueryable<string>), StatusCodes.Status200OK)]
+        [HttpGet("users/names")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUsernames()
+        {
+            // Compile a list of all usernames
+            List<string> names = new List<string>();
+            foreach (EchoUser user in _um.Users.ToList())
+            {
+                names.Add(user.UserName);
+            }
+
+            // Return the list
+            return Ok(names);
         }
 
         // GET: /Authenticate
