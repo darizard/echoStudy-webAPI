@@ -338,19 +338,35 @@ namespace echoStudy_webAPI.Controllers
         /// Retrieves all of a user's information
         /// </summary>
         /// <remarks>
+        /// User authentication is encoded in the JSON Web Token provided in the Authorization header
         /// </remarks>
-        /// <response code="200">Returns nonsensitive, public details of a user</response>
-        /// <response code="400">Username was not provided</response>
-        /// <response code="404">User does not exist</response>
+        /// <response code="200">Returns the user's data</response>
+        /// <response code="400">Token was not provided</response>
+        /// <response code="500">Token was invalid</response>
         [Produces("application/json")]
-        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UserInfoResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status500InternalServerError)]
         [HttpGet("users")]
         [AllowAnonymous]
         public async Task<IActionResult> GetUserInfo()
         {
-            return null;
+            // Ensure something is in the authorization header
+            string[] authHeader = Request.Headers["Authorization"].ToString().Split(' ');
+            if (authHeader.Length < 2)
+            {
+                return BadRequest("JSON Web Token in the authorization header required for this endpoint");
+            }
+            var token = new JwtSecurityToken(authHeader[1]);
+            EchoUser user = await _um.FindByIdAsync(token.Subject);
+
+            // Return their data
+            return Ok(new UserInfoResponse
+            {
+                Email = user.Email,
+                Username = user.UserName,
+                PhoneNumber = user.PhoneNumber
+            });
         }
 
         /// <summary>
