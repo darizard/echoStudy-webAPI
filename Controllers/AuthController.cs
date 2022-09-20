@@ -20,7 +20,9 @@ using static echoStudy_webAPI.Controllers.DecksController;
 
 namespace echoStudy_webAPI.Controllers
 {
-    //auth controller endpoints work from the base application URL
+    /**
+     * Controller responsible for dealing with anything related to Authorization or Identity
+     */
     [Route("")]
     [ApiController]
     public class AuthController : ControllerBase
@@ -29,6 +31,9 @@ namespace echoStudy_webAPI.Controllers
         private readonly IJwtAuthenticationManager _jwtManager;
         private readonly EchoStudyDB _context;
 
+        /**
+         * Initializes AuthController
+         */
         public AuthController(UserManager<EchoUser> um,
                               IJwtAuthenticationManager jwtManager,
                               EchoStudyDB context)
@@ -496,10 +501,29 @@ namespace echoStudy_webAPI.Controllers
                 return NotFound();
             }
 
+            // Get their public decks
+            var query = from d in _context.Decks
+                        where d.UserId == user.Id && d.Access == Access.Public
+                        select new DeckInfo
+                        {
+                            id = d.DeckID,
+                            title = d.Title,
+                            description = d.Description,
+                            access = d.Access.ToString(),
+                            default_flang = d.DefaultFrontLang.ToString(),
+                            default_blang = d.DefaultBackLang.ToString(),
+                            cards = d.Cards.Select(c => c.CardID).ToList(),
+                            ownerId = d.UserId,
+                            date_created = d.DateCreated,
+                            date_touched = d.DateTouched,
+                            date_updated = d.DateUpdated
+                        };
+
             // Return their details
             return Ok(new UserInfoPublicResponse
             {
-                Username = user.UserName
+                Username = user.UserName,
+                Decks = await query.ToListAsync()
             });
         }
 
