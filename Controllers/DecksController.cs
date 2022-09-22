@@ -579,8 +579,8 @@ namespace echoStudy_webAPI.Controllers
                 cardCount++;
 
                 // Conditions that must be true for a card to be "studied"
-                // 1. Card was touched after creation
-                // 2. Card was touched 
+                // 1. Card was touched at least once
+                // 2. Card was touched at the same time or after dateUpdated.
                 if (c.DateTouched != c.DateCreated && c.DateTouched >= c.DateUpdated)
                 {
                     studyCount++;
