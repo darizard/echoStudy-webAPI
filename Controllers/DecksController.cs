@@ -9,6 +9,7 @@ using echoStudy_webAPI.Models;
 using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
+using ThirdParty.Ionic.Zlib;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -37,6 +38,7 @@ namespace echoStudy_webAPI.Controllers
             public string default_blang { get; set; }
             public string ownerId { get; set; }
             public List<int> cards { get; set; }
+            public double studyPercent { get; set; }
             public DateTime date_created { get; set; }
             public DateTime date_updated { get; set; }
             public DateTime date_touched { get; set; }
@@ -88,23 +90,34 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks()
         {
-            var query = from d in _context.Decks
+            // Query the DB for the deck objects
+            var query = from d in _context.Decks.Include(d => d.Cards)
                         where d.UserId == _user.Id
-                        select new DeckInfo
-                        {
-                            id = d.DeckID,
-                            title = d.Title,
-                            description = d.Description,
-                            access = d.Access.ToString(),
-                            default_flang = d.DefaultFrontLang.ToString(),
-                            default_blang = d.DefaultBackLang.ToString(),
-                            cards = d.Cards.Select(c => c.CardID).ToList(),
-                            ownerId = d.UserId,
-                            date_created = d.DateCreated,
-                            date_touched = d.DateTouched,
-                            date_updated = d.DateUpdated
-                        };
-            return Ok(await query.ToListAsync());
+                        select d;
+            var decks = await query.ToListAsync();
+
+            // Build the deck info objects
+            List<DeckInfo> deckInfo = new List<DeckInfo>();
+            foreach(Deck d in decks)
+            {
+                deckInfo.Add(new DeckInfo
+                {
+                    id = d.DeckID,
+                    title = d.Title,
+                    description = d.Description,
+                    access = d.Access.ToString(),
+                    default_flang = d.DefaultFrontLang.ToString(),
+                    default_blang = d.DefaultBackLang.ToString(),
+                    cards = d.Cards.Select(c => c.CardID).ToList(),
+                    ownerId = d.UserId,
+                    studyPercent = calculateStudyPercent(d),
+                    date_created = d.DateCreated,
+                    date_touched = d.DateTouched,
+                    date_updated = d.DateUpdated
+                });
+            }
+
+            return Ok(deckInfo);
         }
 
         // ******TODO: Does not depend at all on current user. Move to a "Public" controller?
@@ -212,24 +225,11 @@ namespace echoStudy_webAPI.Controllers
             // d.DeckID is unique; queryDeck returns only one deck
 
             // first query to see if the desired deck exists
-            var queryDeck = from d in _context.Decks
+            var queryDeck = from d in _context.Decks.Include(d => d.Cards)
                             where d.DeckID == id
-                            select new DeckInfo
-                            {
-                                id = d.DeckID,
-                                title = d.Title,
-                                description = d.Description,
-                                access = d.Access.ToString(),
-                                default_flang = d.DefaultFrontLang.ToString(),
-                                default_blang = d.DefaultBackLang.ToString(),
-                                cards = d.Cards.Select(c => c.CardID).ToList(),
-                                ownerId = d.UserId,
-                                date_created = d.DateCreated,
-                                date_touched = d.DateTouched,
-                                date_updated = d.DateUpdated
-                            };
+                            select d;
 
-            var deck = await queryDeck.FirstOrDefaultAsync();
+            Deck deck = await queryDeck.FirstOrDefaultAsync();
 
             if(deck is null)
             {
@@ -237,12 +237,26 @@ namespace echoStudy_webAPI.Controllers
             }
 
             // ensure the user is the deck owner
-            if(deck.ownerId != _user.Id)
+            if(deck.UserId != _user.Id)
             {
                 return Forbid();
             }
 
-            return Ok(deck);
+            return Ok(new DeckInfo
+            {
+                id = deck.DeckID,
+                title = deck.Title,
+                description = deck.Description,
+                access = deck.Access.ToString(),
+                default_flang = deck.DefaultFrontLang.ToString(),
+                default_blang = deck.DefaultBackLang.ToString(),
+                cards = deck.Cards.Select(c => c.CardID).ToList(),
+                ownerId = deck.UserId,
+                studyPercent = calculateStudyPercent(deck),
+                date_created = deck.DateCreated,
+                date_touched = deck.DateTouched,
+                date_updated = deck.DateUpdated
+            });
         }
 
         // POST: /Decks/{id}
@@ -550,6 +564,30 @@ namespace echoStudy_webAPI.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        /**
+         * Calculates the study percent for a given deck
+         * NOTE: If the deck is obtained from a query, make sure to include the entire card objects
+         */
+        private double calculateStudyPercent(Deck deck)
+        {
+            double studyCount = 0.0;
+            double cardCount = 0.0;
+            foreach (Card c in deck.Cards)
+            {
+                cardCount++;
+
+                // Conditions where the card should not be counted as studied:
+                // 1. Card has never been touched since creation
+                // 2. Card was updated after being studied
+                if (!(c.DateTouched == c.DateCreated || c.DateTouched < c.DateUpdated))
+                {
+                    studyCount++;
+                }
+            }
+
+            return Math.Round(studyCount / cardCount, 4);
         }
     }
 }
