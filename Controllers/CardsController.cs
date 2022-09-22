@@ -10,6 +10,7 @@ using echoStudy_webAPI.Data;
 using Microsoft.AspNetCore.Identity;
 using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Authorization;
+using static echoStudy_webAPI.Controllers.CardsController;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -545,6 +546,69 @@ namespace echoStudy_webAPI.Controllers
                 id = card.CardID,
                 dateCreated = card.DateCreated
             });
+        }
+
+        // Post: /Cards/Study/{id}
+        /// <summary>
+        /// Studies an existing card
+        /// </summary>
+        /// <remarks></remarks>
+        /// <param name="id">ID of the Card to study</param>
+        /// <response code="200">Returns the id of the studied Card</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified card</response>
+        /// <response code="404">Object at the cardId provided was not found</response>
+        [HttpPost("Study/{id}")]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(typeof(OkResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PostCardStudy(int id)
+        {
+            // Ensure the card exists and that the owner made the request
+            Card card = await _context.Cards.FindAsync(id);
+            if (card is null)
+            {
+                return NotFound("Card id " + id + " not found");
+            }
+            if (card.UserId != _user.Id)
+            {
+                return Forbid();
+            }
+
+            // Ensure that the deck exists and that the owner made the request
+            Deck deck = await _context.Decks.FindAsync(card.DeckID);
+            if (deck is null)
+            {
+                return NotFound("Deck id " + id + " not found");
+            }
+            if (deck.UserId != _user.Id)
+            {
+                return Forbid();
+            }
+
+            // Update touched date on the card
+            card.DateTouched = DateTime.Now;
+            _context.Cards.Update(card);
+
+            // Update touched date on the deck
+            deck.DateTouched = DateTime.Now;
+            _context.Decks.Update(deck);
+
+            // Save
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return StatusCode(500);
+            }
+
+            return Ok(card.CardID);
         }
 
         // DELETE: /Cards/Delete/{id}
