@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using System.Linq;
 using echoStudy_webAPI.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace echoStudy_webAPI.Data
 {
@@ -27,7 +28,7 @@ namespace echoStudy_webAPI.Data
         private readonly JwtSettings _jwtSettings;
 
         public JwtAuthenticationManager(EchoStudyDB context,
-                                        UserManager<EchoUser> um, 
+                                        UserManager<EchoUser> um,
                                         TokenValidationParameters tokenValidationParameters,
                                         JwtSettings jwtSettings)
         {
@@ -137,6 +138,7 @@ namespace echoStudy_webAPI.Data
         {
             string tokensub;
             string tokenemail;
+            Claim[] roleClaims = null;
             if (user == null)
             {
                 tokensub = "";
@@ -146,6 +148,12 @@ namespace echoStudy_webAPI.Data
             {
                 tokensub = user.Id.ToString();
                 tokenemail = user.Email;
+                var roleClaimsList = new List<Claim>();
+                foreach(var r in await _um.GetRolesAsync(user))
+                {
+                    roleClaimsList.Add(new Claim(ClaimTypes.Role,r));
+                }
+                roleClaims = roleClaimsList.ToArray();
             }
 
             // need a security token handler
@@ -156,7 +164,6 @@ namespace echoStudy_webAPI.Data
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 // per docs: Gets or sets the output claims to be included in the issued token.
-                // TODO: This probably needs to be changed. Check what the resulting Jwt looks like!
                 Subject = new ClaimsIdentity(new Claim[]
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, tokensub),
@@ -169,6 +176,11 @@ namespace echoStudy_webAPI.Data
                     new SymmetricSecurityKey(tokenKey),
                     SecurityAlgorithms.HmacSha256Signature)
             };
+            // Add role claims to the subject
+            if(roleClaims is not null)
+            {
+                tokenDescriptor.Subject.AddClaims(roleClaims);
+            }
             var accessToken = tokenHandler.CreateToken(tokenDescriptor);
             var refreshToken = new RefreshToken
             {

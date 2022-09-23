@@ -74,8 +74,6 @@ namespace echoStudy_webAPI
                 x.TokenValidationParameters = tokenValidationParameters;
             });
 
-            //services.AddSingleton<IJwtAuthenticationManager>();
-
             services.AddAuthorization(options =>
             {
                 // this essentially requires any endpoints or controllers that want to allow unauthorized access
