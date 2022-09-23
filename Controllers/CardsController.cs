@@ -611,6 +611,69 @@ namespace echoStudy_webAPI.Controllers
             return Ok(card.CardID);
         }
 
+        // Post: /Cards/Score/{id}&{score}
+        /// <summary>
+        /// Sets score of the given card id
+        /// </summary>
+        /// <remarks></remarks>
+        /// <param name="id">ID of the Card to set the score of</param>
+        /// <param name="score">Integer from 0 to 100 representing the score</param>
+        /// <response code="200">Returns the id of the card with the score changed</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified card</response>
+        /// <response code="404">Object at the cardId provided was not found</response>
+        [HttpPost("Score/{id}&{score}")]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(typeof(OkResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PostCardScore(int id, int score)
+        {
+            // Ensure the card exists and that the owner made the request
+            Card card = await _context.Cards.FindAsync(id);
+            if (card is null)
+            {
+                return NotFound("Card id " + id + " not found");
+            }
+            if (card.UserId != _user.Id)
+            {
+                return Forbid();
+            }
+
+            // Ensure that the deck exists and that the owner made the request
+            Deck deck = await _context.Decks.FindAsync(card.DeckID);
+            if (deck is null)
+            {
+                return NotFound("Deck id " + id + " not found");
+            }
+            if (deck.UserId != _user.Id)
+            {
+                return Forbid();
+            }
+
+            // Set the score
+            card.Score = score;
+
+            // Date of change for the card
+            card.DateUpdated = DateTime.Now;
+
+            // Save
+            _context.Cards.Update(card);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return StatusCode(500);
+            }
+
+            return Ok(card.CardID);
+        }
+
         // DELETE: /Cards/Delete/{id}
         /// <summary>
         /// Deletes one specific card
