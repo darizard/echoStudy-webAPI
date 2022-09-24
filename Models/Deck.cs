@@ -46,6 +46,24 @@ namespace echoStudy_webAPI.Models
         public DateTime DateUpdated { get; set; }
         [ScaffoldColumn(false)]
         public DateTime DateTouched { get; set; }
+
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public double StudyPercent 
+        { 
+            get
+            {
+                double studyCount = 0.0;
+                foreach(Card c in Cards)
+                {
+                    if (c.DateTouched != c.DateCreated && c.DateTouched >= c.DateUpdated)
+                    {
+                        studyCount++;
+                    }
+                }
+                return Math.Round(studyCount / Cards.Count, 4);
+            } 
+            private set { } 
+        }
     }
 
 

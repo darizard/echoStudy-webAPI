@@ -231,41 +231,6 @@ namespace echoStudy_webAPI.Controllers
             return Ok(await query.FirstAsync());
         }
 
-        /*
- * "touches" given card by id
- */
-        /*
-        // PATCH: /Cards/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPatch("Touch={id}&{score}")]
-        public async Task<IActionResult> TouchCard(int id, int score)
-        {
-            var cardQuery = from c in _context.Cards
-                            where c.CardID == id
-                            select c;
-            // Card doesn't exist
-            if (!cardQuery.Any())
-            {
-                return BadRequest("Card " + id + " does not exist");
-            }
-            // Update the card
-            else
-            {
-                Card card = cardQuery.First();
-
-                // Update score and last touched
-                card.Score = score;
-                card.DateTouched = DateTime.Now;
-
-                // Mark the card as modified
-                _context.Entry(card).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                return Ok();
-            }
-        }
-        */
-
         // Post: /Cards/{id}
         /// <summary>
         /// Edits an existing Card

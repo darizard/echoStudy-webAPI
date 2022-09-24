@@ -27,7 +27,7 @@ namespace echoStudy_webAPI.Controllers
             _context = context;
         }
 
-        [HttpGet]
+        [HttpGet("decks")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
@@ -53,7 +53,7 @@ namespace echoStudy_webAPI.Controllers
                     default_blang = d.DefaultBackLang.ToString(),
                     cards = d.Cards.Select(c => c.CardID).ToList(),
                     ownerId = d.UserId,
-                    studyPercent = calculateStudyPercent(d),
+                    studyPercent = d.StudyPercent,
                     date_created = d.DateCreated,
                     date_touched = d.DateTouched,
                     date_updated = d.DateUpdated
@@ -61,30 +61,6 @@ namespace echoStudy_webAPI.Controllers
             }
 
             return Ok(deckInfo);
-        }
-
-        /**
-         * Calculates the study percent for a given deck
-         * NOTE: If the deck is obtained from a query, make sure to include the entire card objects
-         */
-        private double calculateStudyPercent(Deck deck)
-        {
-            double studyCount = 0.0;
-            double cardCount = 0.0;
-            foreach (Card c in deck.Cards)
-            {
-                cardCount++;
-
-                // Conditions that must be true for a card to be "studied"
-                // 1. Card was touched at least once
-                // 2. Card was touched at the same time or after dateUpdated.
-                if (c.DateTouched != c.DateCreated && c.DateTouched >= c.DateUpdated)
-                {
-                    studyCount++;
-                }
-            }
-
-            return Math.Round(studyCount / cardCount, 4);
         }
     }
 }
