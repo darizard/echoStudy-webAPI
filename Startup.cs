@@ -17,6 +17,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.EntityFrameworkCore.Proxies;
 
 namespace echoStudy_webAPI
 {
@@ -41,7 +42,8 @@ namespace echoStudy_webAPI
                     .AddNewtonsoftJson(options =>
                         options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
 
-            services.AddDbContext<EchoStudyDB>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<EchoStudyDB>(options => 
+                                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             // TODO: This might be redundant since the key is set in tokenValidationParameters
             // and is kept in appsettings.json (or environment variable if we choose that route)

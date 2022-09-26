@@ -4,11 +4,25 @@ using System.Collections.Generic;
 using echoStudy_webAPI.Data;
 using System;
 using echoStudy_webAPI.Areas.Identity.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace echoStudy_webAPI.Models
 {
     public class Deck
     {
+        private readonly EchoStudyDB _context;
+        public Deck()
+        {
+        }
+
+        public Deck(EchoStudyDB context)
+        {
+            _context = context;
+        }
+
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int DeckID { get; set; }
@@ -52,8 +66,12 @@ namespace echoStudy_webAPI.Models
         { 
             get
             {
+                var cardsWithScores = from c in _context.Cards
+                                      where c.DeckID == this.DeckID
+                                      select c;
+
                 double studyCount = 0.0;
-                foreach(Card c in Cards)
+                foreach(Card c in cardsWithScores.ToList())
                 {
                     if (c.DateTouched != c.DateCreated && c.DateTouched >= c.DateUpdated)
                     {
