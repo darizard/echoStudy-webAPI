@@ -70,6 +70,8 @@ namespace echoStudy_webAPI.Models
                                       where c.DeckID == this.DeckID
                                       select c;
 
+                if (!cardsWithScores.Any()) return 0.0;
+
                 double studyCount = 0.0;
                 foreach(Card c in cardsWithScores.ToList())
                 {
