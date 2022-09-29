@@ -403,7 +403,7 @@ namespace echoStudy_webAPI.Controllers
         public async Task<IActionResult> PostDeckCreate(PostDeckInfo deckInfo)
         {
             // Create and populate a deck with the given info
-            Deck deck = new();
+            Deck deck = new(_context);
             
             if (String.IsNullOrEmpty(deckInfo.title))
             {
