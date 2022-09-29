@@ -14,6 +14,9 @@ namespace echoStudy_webAPI.Models
     public class Deck
     {
         private readonly EchoStudyDB _context;
+        public Deck()
+        {
+        }
 
         public Deck(EchoStudyDB context)
         {
@@ -63,6 +66,11 @@ namespace echoStudy_webAPI.Models
         { 
             get
             {
+                if(_context is null)
+                {
+                    return 0.0;
+                }
+
                 _context.Decks.Include(d => d.Cards);
 
                 if(Cards is null || !Cards.Any())
