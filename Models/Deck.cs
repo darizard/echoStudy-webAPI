@@ -66,14 +66,15 @@ namespace echoStudy_webAPI.Models
         { 
             get
             {
-                var cardsWithScores = from c in _context.Cards
-                                      where c.DeckID == this.DeckID
-                                      select c;
+                _context.Decks.Include(d => d.Cards);
 
-                if (!cardsWithScores.Any()) return 0.0;
+                if(Cards is null || !Cards.Any())
+                {
+                    return 0.0;
+                }
 
                 double studyCount = 0.0;
-                foreach(Card c in cardsWithScores.ToList())
+                foreach(Card c in Cards)
                 {
                     if (c.DateTouched != c.DateCreated && c.DateTouched >= c.DateUpdated)
                     {
