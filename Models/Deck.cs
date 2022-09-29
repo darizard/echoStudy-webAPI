@@ -14,9 +14,6 @@ namespace echoStudy_webAPI.Models
     public class Deck
     {
         private readonly EchoStudyDB _context;
-        public Deck()
-        {
-        }
 
         public Deck(EchoStudyDB context)
         {
