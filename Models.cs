@@ -134,5 +134,11 @@ namespace echoStudy_webAPI.Tests.Models
             public string Email { get; set; }
             public string PhoneNumber { get; set; }
         }
+        
+        public class StudyRequest
+        {
+            public int id { get; set; }
+            public int score { get; set; }
+        }
     }
 }
