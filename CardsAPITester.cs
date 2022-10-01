@@ -99,33 +99,33 @@ namespace echoStudy_webAPI.Tests
                 Assert.Fail("TEST 2: Request failed when trying to get one of John's deck's cards ");
             }
 
-            // TEST 3: Get a deck that can't be found
+            // TEST 3: Get a card that can't be found
             response = await client.GetAsync("Cards?deckId=-1");
 
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 3: Success for a nonexistent deck ID");
+                Assert.Fail("TEST 3: Success for a nonexistent card ID");
             }
             else
             {
                 if(response.StatusCode != System.Net.HttpStatusCode.NotFound)
                 {
-                    Assert.Fail("TEST 3: Status code for non existent deck wasn't NotFound");
+                    Assert.Fail("TEST 3: Status code for non existent card wasn't NotFound");
                 }
             }
 
-            // TEST 4: Get a deck that isn't John's
+            // TEST 4: Get a card that isn't John's
             response = await client.GetAsync("Cards?deckId=4");
 
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 3: Success for deck John doesn't own");
+                Assert.Fail("TEST 3: Success for card John doesn't own");
             }
             else
             {
                 if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
                 {
-                    Assert.Fail("TEST 3: Status code for a deck John doesn't own wasn't Forbidden");
+                    Assert.Fail("TEST 3: Status code for a card John doesn't own wasn't Forbidden");
                 }
             }
         }
@@ -350,6 +350,7 @@ namespace echoStudy_webAPI.Tests
                 }
             }
 
+            /*
             // no userid
             populateCard(cardInfo);
             cardInfo.userId = null;
@@ -365,6 +366,7 @@ namespace echoStudy_webAPI.Tests
                     Assert.Fail("TEST 1: Status code was not BadRequest for missing parameters");
                 }
             }
+            */
 
             // bogus deckId
             populateCard(cardInfo);
@@ -379,22 +381,6 @@ namespace echoStudy_webAPI.Tests
                 if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
                 {
                     Assert.Fail("TEST 1: Status code was not NotFound for a bad deckId");
-                }
-            }
-
-            // bogus userId
-            populateCard(cardInfo);
-            cardInfo.userId = "123456789";
-            response = await client.PostAsync("Cards", createContent(cardInfo));
-            if (response.IsSuccessStatusCode)
-            {
-                Assert.Fail("TEST 1: Request succeeded with someone else's userId");
-            }
-            else
-            {
-                if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
-                {
-                    Assert.Fail("TEST 1: Status code was not Forbidden for creating a card with someone else's user ID");
                 }
             }
 
@@ -453,6 +439,65 @@ namespace echoStudy_webAPI.Tests
             else
             {
                 Assert.Fail("TEST 2: Request failed to create card");
+            }
+        }
+
+        /**
+        * Tests POST Cards/{id} endpoint with every possible request and validates the responses
+        */
+        [TestMethod]
+        public async Task PostStudyCardTest()
+        {
+            // Ensure John's token is set for the client first
+            if (!userTokenSet)
+            {
+                await HelperFunctions.GrabJohnToken(client);
+                this.userId = await HelperFunctions.GrabUserId(client);
+            }
+
+            // Study the card
+            StudyRequest studyInfo = new StudyRequest
+            {
+                id = 1,
+                score = 1
+            };
+            HttpResponseMessage response = await client.PostAsync("Cards/Study", createContent(studyInfo));
+            if (response.IsSuccessStatusCode)
+            {
+                string contents = await response.Content.ReadAsStringAsync();
+                Assert.IsNotNull(contents);
+                Assert.AreNotEqual("", contents);
+
+                studyInfo.score = 0;
+
+            }
+            else
+            {
+                Assert.Fail("Failed to study card");
+            }
+
+            // Study non-existent card
+            studyInfo.id = -1;
+            response = await client.PostAsync("Cards/Study", createContent(studyInfo));
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 1: Invalid card id succeeded");
+            }
+            else if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+            {
+                Assert.Fail("TEST 1: Invalid card id did not return notfound");
+            }
+
+            // Study a card john doesn't own
+            studyInfo.id = 900;
+            response = await client.PostAsync("Cards/Study", createContent(studyInfo));
+            if (response.IsSuccessStatusCode)
+            {
+                Assert.Fail("TEST 1: A card john doesn't own succeeded");
+            }
+            else if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+            {
+                Assert.Fail("TEST 1: A card John doesn't own doesn't yield Forbidden result");
             }
         }
 
@@ -520,24 +565,6 @@ namespace echoStudy_webAPI.Tests
                 }
             }
 
-            // TEST 4: Edit a card with an invalid userId
-            // Card
-            cardInfo = new PostCardInfo();
-            populateCard(cardInfo);
-            cardInfo.userId = "1234567890";
-            response = await client.PostAsync("Cards/1", createContent(cardInfo));
-            if (response.IsSuccessStatusCode)
-            {
-                Assert.Fail("TEST 4: Request succeeded for a bogus userId");
-            }
-            else
-            {
-                if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
-                {
-                    Assert.Fail("TEST 4: Status code was not BadRequest for creating a card with a bad userId");
-                }
-            }
-
             // TEST 5: Edit a card that someone else owns
             // Card
             cardInfo = new PostCardInfo();
@@ -594,7 +621,6 @@ namespace echoStudy_webAPI.Tests
                     Assert.AreEqual(cardInfo.backLang, card.blang);
 
                     // Change it all back
-                    cardInfo.userId = oldCard.ownerId;
                     cardInfo.deckId = oldCard.deckId;
                     cardInfo.frontText = oldCard.ftext;
                     cardInfo.backText = oldCard.btext;
@@ -626,7 +652,6 @@ namespace echoStudy_webAPI.Tests
             cardInfo.backText = "tanzen";
             cardInfo.frontLang = "English";
             cardInfo.backLang = "German";
-            cardInfo.userId = this.userId;
             cardInfo.deckId = 1;
         }
 
@@ -637,6 +662,18 @@ namespace echoStudy_webAPI.Tests
         {
             // Serialize our concrete class into a JSON String
             var stringPayload = JsonConvert.SerializeObject(card);
+
+            // Wrap our JSON inside a StringContent which then can be used by the HttpClient class
+            return new StringContent(stringPayload, Encoding.UTF8, "application/json");
+        }
+
+        /**
+        * Creates an HttpContent object with the given study request
+        */
+        private HttpContent createContent(StudyRequest studyReq)
+        {
+            // Serialize our concrete class into a JSON String
+            var stringPayload = JsonConvert.SerializeObject(studyReq);
 
             // Wrap our JSON inside a StringContent which then can be used by the HttpClient class
             return new StringContent(stringPayload, Encoding.UTF8, "application/json");
