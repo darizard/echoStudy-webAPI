@@ -99,33 +99,31 @@ namespace echoStudy_webAPI.Tests
                 Assert.Fail("TEST 2: Request failed when trying to get one of John's deck's cards ");
             }
 
-            // TEST 3: Get a card that can't be found
+            // TEST 3: Get a deck that can't be found
             response = await client.GetAsync("Cards?deckId=-1");
-
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 3: Success for a nonexistent card ID");
+                Assert.Fail("TEST 3: Success for a nonexistent deck ID");
             }
             else
             {
                 if(response.StatusCode != System.Net.HttpStatusCode.NotFound)
                 {
-                    Assert.Fail("TEST 3: Status code for non existent card wasn't NotFound");
+                    Assert.Fail("TEST 3: Status code for non existent deck wasn't NotFound");
                 }
             }
 
-            // TEST 4: Get a card that isn't John's
+            // TEST 4: Get a deck that isn't John's
             response = await client.GetAsync("Cards?deckId=4");
-
             if (response.IsSuccessStatusCode)
             {
-                Assert.Fail("TEST 3: Success for card John doesn't own");
+                Assert.Fail("TEST 3: Success for deck John doesn't own");
             }
             else
             {
                 if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
                 {
-                    Assert.Fail("TEST 3: Status code for a card John doesn't own wasn't Forbidden");
+                    Assert.Fail("TEST 3: Status code for a deck John doesn't own wasn't Forbidden");
                 }
             }
         }
