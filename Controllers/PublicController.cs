@@ -53,7 +53,7 @@ namespace echoStudy_webAPI.Controllers
                     default_blang = d.DefaultBackLang.ToString(),
                     cards = d.Cards.Select(c => c.CardID).ToList(),
                     ownerId = d.UserId,
-                    studyPercent = d.StudyPercent,
+                    studyPercent = (double) d.StudyPercent,
                     date_created = d.DateCreated,
                     date_touched = d.DateTouched,
                     date_updated = d.DateUpdated

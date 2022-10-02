@@ -62,7 +62,7 @@ namespace echoStudy_webAPI.Models
         public DateTime DateTouched { get; set; }
 
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
-        public double StudyPercent 
+        public double? StudyPercent 
         { 
             get
             {
