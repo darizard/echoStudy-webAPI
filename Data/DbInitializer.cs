@@ -28,12 +28,18 @@ namespace echoStudy_webAPI.Data
 
         public static void CreateEchoStudyDB(EchoStudyDB echoContext, EchoStudyDB identityContext)
         {
-            // Create the DB if it isn't already created
+            // Create the DBs if it isn't already created
+            // Try to migrate. Migration can throw
             if(echoContext.Database.EnsureCreated() == false)
             {
-                // Migrations
-                echoContext.Database.Migrate();
-                identityContext.Database.Migrate();
+                try
+                {
+                    echoContext.Database.Migrate();
+                }
+                catch (Microsoft.Data.SqlClient.SqlException)
+                {
+                    Console.WriteLine("WARNING: Migration failed (likely due to database already being up to date)");
+                }     
             }
         }
 
