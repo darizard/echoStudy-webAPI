@@ -370,7 +370,8 @@ namespace echoStudy_webAPI.Controllers
             {
                 Email = user.Email,
                 Username = user.UserName,
-                PhoneNumber = user.PhoneNumber
+                PhoneNumber = user.PhoneNumber,
+                Id = user.Id
             });
         }
 
