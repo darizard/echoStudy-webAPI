@@ -67,6 +67,15 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /**
+        * Define response type for Deck creation
+        */
+        public class BatchDeckCreationResponse
+        {
+            public List<int> ids { get; set; }
+            public DateTime dateCreated { get; set; }
+        }
+
+        /**
          * Define response type for Deck update
          */
         public class DeckUpdateResponse
@@ -492,6 +501,126 @@ namespace echoStudy_webAPI.Controllers
             {
                 id = deck.DeckID,
                 dateCreated = deck.DateCreated
+            });
+        }
+
+        // POST: api/Decks
+        /// <summary>
+        /// Creates multiple decks for the currently authenticated user
+        /// </summary>
+        /// <param name="decks">
+        /// List of decks to create
+        /// Required: title, description, default_flang, default_blang -- Optional: access, cardIds
+        /// </param>
+        /// <remarks>Default access level is Private. The cardIds list currently does nothing.</remarks>
+        /// <response code="201">Returns the id and creation date of the created Deck</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="404">Object at cardId provided was not found</response>
+        [HttpPost("batch")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(DeckCreationResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PostDeckCreate(List<PostDeckInfo> decks)
+        {
+            List<int> ids = new List<int>();
+            foreach (PostDeckInfo deckInfo in decks)
+            {
+                // Create and populate a deck with the given info
+                Deck deck = new();
+
+                if (String.IsNullOrEmpty(deckInfo.title))
+                {
+                    return BadRequest("a non-empty title is required at index " + ids.Count);
+                }
+                if (String.IsNullOrEmpty(deckInfo.description))
+                {
+                    return BadRequest("a non-empty description is required at index " + ids.Count);
+                }
+                if (String.IsNullOrEmpty(deckInfo.default_flang))
+                {
+                    return BadRequest("a non-empty default_flang is required at index " + ids.Count);
+                }
+                if (String.IsNullOrEmpty(deckInfo.default_blang))
+                {
+                    return BadRequest("a non-empty default_blang is required  at index " + ids.Count);
+                }
+
+                // Add owner
+                deck.UserId = _user.Id;
+
+                //----------------Set the rest of the deck info
+                deck.Title = deckInfo.title;
+                deck.Description = deckInfo.description;
+                // Handle the enums with switch cases
+                if (deckInfo.access is null) deck.Access = Access.Private;
+                else
+                {
+                    switch (deckInfo.access.ToLower())
+                    {
+                        case "public":
+                            deck.Access = Access.Public;
+                            break;
+                        case "private":
+                            deck.Access = Access.Private;
+                            break;
+                        default:
+                            return BadRequest("access should be public, private, or omitted (default private) at index " + ids.Count);
+                    }
+                }
+
+                switch (deckInfo.default_flang.ToLower())
+                {
+                    case "english":
+                        deck.DefaultFrontLang = Language.English;
+                        break;
+                    case "spanish":
+                        deck.DefaultFrontLang = Language.Spanish;
+                        break;
+                    case "japanese":
+                        deck.DefaultFrontLang = Language.Japanese;
+                        break;
+                    case "german":
+                        deck.DefaultFrontLang = Language.German;
+                        break;
+                    default:
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + ids.Count + " has a language not listed");
+                }
+                switch (deckInfo.default_blang.ToLower())
+                {
+                    case "english":
+                        deck.DefaultBackLang = Language.English;
+                        break;
+                    case "spanish":
+                        deck.DefaultBackLang = Language.Spanish;
+                        break;
+                    case "japanese":
+                        deck.DefaultBackLang = Language.Japanese;
+                        break;
+                    case "german":
+                        deck.DefaultBackLang = Language.German;
+                        break;
+                    default:
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German.  Card at index " + ids.Count + " has a language not listed");
+                }
+
+                // Dates
+                deck.DateCreated = DateTime.Now;
+                deck.DateTouched = DateTime.Now;
+                deck.DateUpdated = DateTime.Now;
+
+                await _context.Decks.AddAsync(deck);
+                ids.Add(deck.DeckID);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("PostDeckCreate", new BatchDeckCreationResponse
+            {
+                ids = ids,
+                dateCreated = DateTime.Now
             });
         }
 

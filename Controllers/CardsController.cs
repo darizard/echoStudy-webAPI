@@ -86,6 +86,15 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /**
+        * Define response type for batch Card creation
+        */
+        public class BatchCardCreationResponse
+        {
+            public List<int> ids { get; set; }
+            public DateTime dateCreated { get; set; }
+        }
+
+        /**
          * Define response type for Card update
          */
         public class CardUpdateResponse
@@ -530,6 +539,152 @@ namespace echoStudy_webAPI.Controllers
                 dateCreated = card.DateCreated
             });
         }
+
+        // POST: /Cards
+        /// <summary>
+        /// Creates multiple cards for the currently authenticated user
+        /// </summary>
+        /// <param name="cards">
+        /// List of cards to create
+        /// Required: frontText, backText, frontLang, backLang, deckId
+        /// </param>
+        /// <remarks></remarks>
+        /// <response code="201">Returns the id and creation date of the created Card</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to add a card to the specified deck</response>
+        /// <response code="404">Deck at deckId provided was not found</response>
+        [HttpPost("batch")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CardCreationResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PostCardCreate(List<PostCardInfo> cards)
+        {
+            List<int> ids = new List<int>();
+            foreach (PostCardInfo cardInfo in cards)
+            {
+                if (cardInfo.frontText is null)
+                {
+                    return BadRequest("frontText is required at index " + ids.Count);
+                }
+                if (cardInfo.backText is null)
+                {
+                    return BadRequest("backText is required at index " + ids.Count);
+                }
+                if (cardInfo.frontLang is null)
+                {
+                    return BadRequest("frontLang is required at index " + ids.Count);
+                }
+                if (cardInfo.backLang is null)
+                {
+                    return BadRequest("backLang is required at index " + ids.Count);
+                }
+                if (cardInfo.deckId is null)
+                {
+                    return BadRequest("deckId is required at index " + ids.Count);
+                }
+
+                // Get the related deck
+                var deckQuery = from d in _context.Decks
+                                where d.DeckID == cardInfo.deckId
+                                select d;
+
+                Deck deck = await deckQuery.FirstOrDefaultAsync();
+                if (deck is null)
+                {
+                    return NotFound("Deck ID " + cardInfo.deckId + " not found at index " + ids.Count);
+                }
+                if (deck.UserId != _user.Id)
+                {
+                    return Forbid();
+                }
+
+                // Create a card and assign it all of the basic provided data
+                Card card = new Card();
+
+                card.UserId = _user.Id;
+
+                card.FrontText = cardInfo.frontText;
+                card.BackText = cardInfo.backText;
+                card.DeckID = (int)cardInfo.deckId;
+
+                switch (cardInfo.frontLang.ToLower())
+                {
+                    case "english":
+                        card.FrontLang = Language.English;
+                        break;
+                    case "spanish":
+                        card.FrontLang = Language.Spanish;
+                        break;
+                    case "japanese":
+                        card.FrontLang = Language.Japanese;
+                        break;
+                    case "german":
+                        card.FrontLang = Language.German;
+                        break;
+                    default:
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                }
+                switch (cardInfo.backLang.ToLower())
+                {
+                    case "english":
+                        card.BackLang = Language.English;
+                        break;
+                    case "spanish":
+                        card.BackLang = Language.Spanish;
+                        break;
+                    case "japanese":
+                        card.BackLang = Language.Japanese;
+                        break;
+                    case "german":
+                        card.BackLang = Language.German;
+                        break;
+                    default:
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                }
+
+                // Assign it dates and a score of 0
+                card.DateCreated = DateTime.Now;
+                card.DateTouched = DateTime.Now;
+                card.DateUpdated = DateTime.Now;
+                card.Score = 0;
+                card.DeckPosition = "";
+
+                // Make Polly calls
+                card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
+                card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
+
+                // update related deck's DateUpdated
+                card.Deck = deck;
+                deck.DateUpdated = card.DateUpdated;
+                _context.Decks.Update(deck);
+
+                // Ready to add
+                _context.Cards.Add(card);
+                ids.Add(card.CardID);
+            }
+
+            // Save all the added cards
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return StatusCode(500);
+            }
+
+            // Indicate success
+            return CreatedAtAction("PostCardCreate", new BatchCardCreationResponse
+            {
+                ids = ids,
+                dateCreated = DateTime.Now
+            });
+        }
+
         // Post: /Cards/Study
         /// <summary>
         /// Studies the card related to the provided cardId
