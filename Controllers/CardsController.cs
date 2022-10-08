@@ -626,7 +626,7 @@ namespace echoStudy_webAPI.Controllers
                         card.FrontLang = Language.German;
                         break;
                     default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + ids.Count + " has a language not listed");
                 }
                 switch (cardInfo.backLang.ToLower())
                 {
@@ -643,7 +643,7 @@ namespace echoStudy_webAPI.Controllers
                         card.BackLang = Language.German;
                         break;
                     default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + ids.Count + " has a language not listed");
                 }
 
                 // Assign it dates and a score of 0

@@ -586,7 +586,7 @@ namespace echoStudy_webAPI.Controllers
                         deck.DefaultFrontLang = Language.German;
                         break;
                     default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + ids.Count + " has a language not listed");
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Deck at index " + ids.Count + " has a language not listed");
                 }
                 switch (deckInfo.default_blang.ToLower())
                 {
@@ -603,7 +603,7 @@ namespace echoStudy_webAPI.Controllers
                         deck.DefaultBackLang = Language.German;
                         break;
                     default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German.  Card at index " + ids.Count + " has a language not listed");
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Deck at index " + ids.Count + " has a language not listed");
                 }
 
                 // Dates
