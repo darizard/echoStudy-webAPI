@@ -643,9 +643,9 @@ namespace echoStudy_webAPI.Controllers
 
         // DELETE: /Cards/Delete
         /// <summary>
-        /// Deletes the cards related to the provided IDs
+        /// Deletes the card related to the provided ID
         /// </summary>
-        /// <param name="ids">The IDs of the cards to be deleted</param>
+        /// <param name="id">ID of the card to be deleted</param>
         /// <response code="204"></response>
         /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
         /// <response code="403">The current user is not authorized to access the specified card</response>
@@ -658,24 +658,21 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> DeleteCard(List<int> ids)
+        public async Task<IActionResult> DeleteCard(int id)
         {
-            // Delete each card id provided
-            foreach(int id in ids)
+            // Delete the card
+            Card card = await _context.Cards.FindAsync(id);
+
+            if (card == null)
             {
-                Card card = await _context.Cards.FindAsync(id);
-
-                if (card == null)
-                {
-                    return NotFound();
-                }
-                if (card.UserId != _user.Id)
-                {
-                    return Forbid();
-                }
-
-                _context.Cards.Remove(card);
+                return NotFound();
             }
+            if (card.UserId != _user.Id)
+            {
+                return Forbid();
+            }
+
+            _context.Cards.Remove(card);
 
             try
             {
