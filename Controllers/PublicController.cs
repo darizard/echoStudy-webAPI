@@ -29,6 +29,15 @@ namespace echoStudy_webAPI.Controllers
             _context = context;
         }
 
+        /**
+        * Define response type for copying a deck
+        */
+        public class DeckCopyResponse
+        {
+            public int id { get; set; }
+            public DateTime dateCreated { get; set; }
+        }
+
         [HttpGet("decks")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
@@ -78,6 +87,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
         /// <response code="403">The deck is private and therefore not available for copying</response>
         /// <response code="404">Object at the deck id provided was not found</response>
+        /// <response code="500">Database failed to save despite valid request</response>
         [HttpPost("copy/deck={id}")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(DeckCreationResponse), StatusCodes.Status201Created)]
@@ -85,6 +95,7 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> ShareDeck(int id)
         {
             // Ensure it exists
@@ -152,15 +163,23 @@ namespace echoStudy_webAPI.Controllers
             {
                 await _context.Cards.AddAsync(c);
             }
-            await _context.SaveChangesAsync();
 
-            // Grab and copy all the cards
-            var cardQuery2 = from d in _context.Cards
-                            where d.DeckID == copyDeck.DeckID
-                            select d;
-            List<Card> cards2 = await cardQuery2.ToListAsync();
+            // Try to save
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+
             // Indicate success
-            return CreatedAtAction("PublicDeckCopy", new DeckCreationResponse
+            return CreatedAtAction("PublicDeckCopy", new DeckCopyResponse
             {
                 id = copyDeck.DeckID,
                 dateCreated = deck.DateCreated

@@ -72,23 +72,14 @@ namespace echoStudy_webAPI.Controllers
         */
         public class PostStudyResponse
         {
-            public int id { get; set; }
+            public List<int> ids { get; set; }
             public DateTime dateStudied { get; set; }
-        }
-
-        /**
-         * Define response type for Card creation
-         */
-        public class CardCreationResponse
-        {
-            public int id { get; set; }
-            public DateTime dateCreated { get; set; }
         }
 
         /**
         * Define response type for batch Card creation
         */
-        public class BatchCardCreationResponse
+        public class CardCreationResponse
         {
             public List<int> ids { get; set; }
             public DateTime dateCreated { get; set; }
@@ -254,6 +245,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at the cardId provided was not found</response>
+        /// <response code="500">Database failed to complete card update despite valid request</response>
         [HttpPost("{id}")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(typeof(CardUpdateResponse), StatusCodes.Status200OK)]
@@ -261,6 +253,7 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> PostCardEdit(int id, [FromBody] PostCardInfo cardInfo)
         {
             // Ensure the card exists and that the owner made the request
@@ -391,9 +384,13 @@ namespace echoStudy_webAPI.Controllers
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException e)
             {
-                return StatusCode(500);
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
             }
 
             return Ok(new CardUpdateResponse
@@ -405,9 +402,10 @@ namespace echoStudy_webAPI.Controllers
 
         // POST: /Cards
         /// <summary>
-        /// Creates a Card for the currently authenticated user
+        /// Creates cards for the currently authenticated user through the provided list
         /// </summary>
-        /// <param name="cardInfo">
+        /// <param name="cards">
+        /// List of cards to create.
         /// Required: frontText, backText, frontLang, backLang, deckId
         /// </param>
         /// <remarks></remarks>
@@ -416,6 +414,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
         /// <response code="403">The current user is not authorized to add a card to the specified deck</response>
         /// <response code="404">Deck at deckId provided was not found</response>
+        /// <response code="500">Database failed to complete card creation despite valid request</response>
         [HttpPost]
         [Produces("application/json")]
         [ProducesResponseType(typeof(CardCreationResponse), StatusCodes.Status201Created)]
@@ -423,168 +422,33 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> PostCardCreate(PostCardInfo cardInfo)
-        {
-            if (cardInfo.frontText is null)
-            {
-                return BadRequest("frontText is required");
-            }
-            if (cardInfo.backText is null)
-            {
-                return BadRequest("backText is required");
-            }
-            if (cardInfo.frontLang is null)
-            {
-                return BadRequest("frontLang is required");
-            }
-            if (cardInfo.backLang is null)
-            {
-                return BadRequest("backLang is required");
-            }
-            if (cardInfo.deckId is null)
-            {
-                return BadRequest("deckId is required");
-            }
-
-            // Get the related deck
-            var deckQuery = from d in _context.Decks
-                            where d.DeckID == cardInfo.deckId
-                            select d;
-            
-            Deck deck = await deckQuery.FirstOrDefaultAsync();
-            if (deck is null)
-            {
-                return NotFound("Deck ID " + cardInfo.deckId + " not found");
-            }
-            if (deck.UserId != _user.Id)
-            {
-                return Forbid();
-            }
-
-            // Create a card and assign it all of the basic provided data
-            Card card = new Card();
-
-            card.UserId = _user.Id;
-
-            card.FrontText = cardInfo.frontText;
-            card.BackText = cardInfo.backText;
-            card.DeckID = (int)cardInfo.deckId;
-
-            switch (cardInfo.frontLang.ToLower())
-            {
-                case "english":
-                    card.FrontLang = Language.English;
-                    break;
-                case "spanish":
-                    card.FrontLang = Language.Spanish;
-                    break;
-                case "japanese":
-                    card.FrontLang = Language.Japanese;
-                    break;
-                case "german":
-                    card.FrontLang = Language.German;
-                    break;
-                default:
-                    return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
-            }
-            switch (cardInfo.backLang.ToLower())
-            {
-                case "english":
-                    card.BackLang = Language.English;
-                    break;
-                case "spanish":
-                    card.BackLang = Language.Spanish;
-                    break;
-                case "japanese":
-                    card.BackLang = Language.Japanese;
-                    break;
-                case "german":
-                    card.BackLang = Language.German;
-                    break;
-                default:
-                    return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
-            }
-
-            // Assign it dates and a score of 0
-            card.DateCreated = DateTime.Now;
-            card.DateTouched = DateTime.Now;
-            card.DateUpdated = DateTime.Now;
-            card.Score = 0;
-            card.DeckPosition = "";
-
-            // Make Polly calls
-            card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
-            card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
-
-            // update related deck's DateUpdated
-            card.Deck = deck;
-            deck.DateUpdated = card.DateUpdated;
-            _context.Decks.Update(deck);
-
-            // Ready to add
-            _context.Cards.Add(card);
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return StatusCode(500);
-            }
-
-            return CreatedAtAction("PostCardCreate", new CardCreationResponse
-            {
-                id = card.CardID,
-                dateCreated = card.DateCreated
-            });
-        }
-
-        // POST: /Cards
-        /// <summary>
-        /// Creates multiple cards for the currently authenticated user
-        /// </summary>
-        /// <param name="cards">
-        /// List of cards to create
-        /// Required: frontText, backText, frontLang, backLang, deckId
-        /// </param>
-        /// <remarks></remarks>
-        /// <response code="201">Returns the id and creation date of the created Card</response>
-        /// <response code="400">Invalid input or input type</response>
-        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
-        /// <response code="403">The current user is not authorized to add a card to the specified deck</response>
-        /// <response code="404">Deck at deckId provided was not found</response>
-        [HttpPost("batch")]
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(CardCreationResponse), StatusCodes.Status201Created)]
-        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> PostCardCreate(List<PostCardInfo> cards)
         {
-            List<int> ids = new List<int>();
+            // Create each card provided and log them as they are created
+            List<Card> createdCards = new List<Card>();
             foreach (PostCardInfo cardInfo in cards)
             {
+                // Required fields
                 if (cardInfo.frontText is null)
                 {
-                    return BadRequest("frontText is required at index " + ids.Count);
+                    return BadRequest("frontText is required at index " + createdCards.Count);
                 }
                 if (cardInfo.backText is null)
                 {
-                    return BadRequest("backText is required at index " + ids.Count);
+                    return BadRequest("backText is required at index " + createdCards.Count);
                 }
                 if (cardInfo.frontLang is null)
                 {
-                    return BadRequest("frontLang is required at index " + ids.Count);
+                    return BadRequest("frontLang is required at index " + createdCards.Count);
                 }
                 if (cardInfo.backLang is null)
                 {
-                    return BadRequest("backLang is required at index " + ids.Count);
+                    return BadRequest("backLang is required at index " + createdCards.Count);
                 }
                 if (cardInfo.deckId is null)
                 {
-                    return BadRequest("deckId is required at index " + ids.Count);
+                    return BadRequest("deckId is required at index " + createdCards.Count);
                 }
 
                 // Get the related deck
@@ -595,22 +459,19 @@ namespace echoStudy_webAPI.Controllers
                 Deck deck = await deckQuery.FirstOrDefaultAsync();
                 if (deck is null)
                 {
-                    return NotFound("Deck ID " + cardInfo.deckId + " not found at index " + ids.Count);
+                    return NotFound("Deck ID " + cardInfo.deckId + " not found at index " + createdCards.Count);
                 }
                 if (deck.UserId != _user.Id)
                 {
                     return Forbid();
                 }
 
-                // Create a card and assign it all of the basic provided data
+                // Create a card and assign it all of the provided data
                 Card card = new Card();
-
                 card.UserId = _user.Id;
-
                 card.FrontText = cardInfo.frontText;
                 card.BackText = cardInfo.backText;
                 card.DeckID = (int)cardInfo.deckId;
-
                 switch (cardInfo.frontLang.ToLower())
                 {
                     case "english":
@@ -626,7 +487,7 @@ namespace echoStudy_webAPI.Controllers
                         card.FrontLang = Language.German;
                         break;
                     default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + ids.Count + " has a language not listed");
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + createdCards.Count + " has a language not listed");
                 }
                 switch (cardInfo.backLang.ToLower())
                 {
@@ -643,7 +504,7 @@ namespace echoStudy_webAPI.Controllers
                         card.BackLang = Language.German;
                         break;
                     default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + ids.Count + " has a language not listed");
+                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German. Card at index " + createdCards.Count + " has a language not listed");
                 }
 
                 // Assign it dates and a score of 0
@@ -664,7 +525,7 @@ namespace echoStudy_webAPI.Controllers
 
                 // Ready to add
                 _context.Cards.Add(card);
-                ids.Add(card.CardID);
+                createdCards.Add(card);
             }
 
             // Save all the added cards
@@ -672,13 +533,24 @@ namespace echoStudy_webAPI.Controllers
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException e)
             {
-                return StatusCode(500);
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+
+            // Now that save changes was called the IDs are generated
+            List<int> ids = new List<int>();
+            foreach (Card c in createdCards)
+            {
+                ids.Add(c.CardID);
             }
 
             // Indicate success
-            return CreatedAtAction("PostCardCreate", new BatchCardCreationResponse
+            return CreatedAtAction("PostCardCreate", new CardCreationResponse
             {
                 ids = ids,
                 dateCreated = DateTime.Now
@@ -687,15 +559,16 @@ namespace echoStudy_webAPI.Controllers
 
         // Post: /Cards/Study
         /// <summary>
-        /// Studies the card related to the provided cardId
+        /// Studies the cards related to the provided IDs
         /// </summary>
-        /// <remarks></remarks>
-        /// <param name="studyInfo">Info required for studying a card. Score may be null/omitted to keep the same score. </param>
+        /// <remarks>Score is optional</remarks>
+        /// <param name="studyInfos">Info required for studying a card. Score may be null/omitted to keep the same score. </param>
         /// <response code="200">Returns the id of the card and study date of the card</response>
         /// <response code="400">Invalid input or input type</response>
         /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at the cardId provided was not found</response>
+        /// <response code="500">Database failed to complete card update despite valid request</response>
         [HttpPost("Study")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(typeof(PostStudyResponse), StatusCodes.Status200OK)]
@@ -703,91 +576,119 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> PostCardStudy(PostStudyInfo studyInfo)
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> PostCardStudy(List<PostStudyInfo> studyInfos)
         {
-            // Ensure the card exists and that the owner made the request
-            Card card = await _context.Cards.FindAsync(studyInfo.id);
-            if (card is null)
+            List<int> ids = new List<int>();
+            foreach(PostStudyInfo studyInfo in studyInfos)
             {
-                return NotFound("Card id " + studyInfo.id + " not found");
-            }
-            if (card.UserId != _user.Id)
-            {
-                return Forbid();
+                // Ensure the card exists and that the owner made the request
+                Card card = await _context.Cards.FindAsync(studyInfo.id);
+                if (card is null)
+                {
+                    return NotFound("Card id " + studyInfo.id + " not found");
+                }
+                if (card.UserId != _user.Id)
+                {
+                    return Forbid();
+                }
+
+                // Ensure that the deck exists and that the owner made the request
+                Deck deck = await _context.Decks.FindAsync(card.DeckID);
+                if (deck is null)
+                {
+                    return NotFound("Deck id " + card.DeckID + " not found");
+                }
+                if (deck.UserId != _user.Id)
+                {
+                    return Forbid();
+                }
+
+                // Set the score if it was provided
+                if (studyInfo.score is not null)
+                {
+                    card.Score = (int)studyInfo.score;
+                }
+
+                // Update touched date on the card and deck
+                card.DateTouched = DateTime.Now;
+                deck.DateTouched = DateTime.Now;
+
+                // Update the card and deck
+                _context.Cards.Update(card);
+                _context.Decks.Update(deck);
+                ids.Add(card.CardID);
             }
 
-            // Ensure that the deck exists and that the owner made the request
-            Deck deck = await _context.Decks.FindAsync(card.DeckID);
-            if (deck is null)
-            {
-                return NotFound("Deck id " + card.DeckID + " not found");
-            }
-            if (deck.UserId != _user.Id)
-            {
-                return Forbid();
-            }
-
-            // Set the score if it was provided
-            if(studyInfo.score is not null)
-            {
-                card.Score = (int) studyInfo.score;
-            }
-
-            // Update touched date on the card and deck
-            card.DateTouched = DateTime.Now;
-            deck.DateTouched = DateTime.Now;
-            _context.Cards.Update(card);
-            _context.Decks.Update(deck);
-
-            // Save
-            _context.Cards.Update(card);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException e)
             {
-                return StatusCode(500);
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
             }
 
             // Indicate success
             return Ok(new PostStudyResponse
             {
-                id = card.CardID,
-                dateStudied = card.DateTouched
+                ids = ids,
+                dateStudied = DateTime.Now
             });
         }
 
-        // DELETE: /Cards/Delete/{id}
+        // DELETE: /Cards/Delete
         /// <summary>
-        /// Deletes one specific card
+        /// Deletes the cards related to the provided IDs
         /// </summary>
-        /// <param name="id">The card's ID</param>
+        /// <param name="ids">The IDs of the cards to be deleted</param>
         /// <response code="204"></response>
         /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at cardId was not found</response>
-        [HttpPost("Delete/{id}")]
+        /// <response code="500">Database failed to complete card deletion despite valid request</response>
+        [HttpPost("Delete")]
         [Produces("text/plain", "application/json")]
         [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteCard(int id)
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteCard(List<int> ids)
         {
-            Card card = await _context.Cards.FindAsync(id);
-
-            if (card == null)
+            // Delete each card id provided
+            foreach(int id in ids)
             {
-                return NotFound();
-            }
-            if (card.UserId != _user.Id)
-            {
-                return Forbid();
+                Card card = await _context.Cards.FindAsync(id);
+
+                if (card == null)
+                {
+                    return NotFound();
+                }
+                if (card.UserId != _user.Id)
+                {
+                    return Forbid();
+                }
+
+                _context.Cards.Remove(card);
             }
 
-            _context.Cards.Remove(card);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
+            }
 
             return NoContent();
         }
