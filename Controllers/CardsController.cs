@@ -55,6 +55,7 @@ namespace echoStudy_webAPI.Controllers
             public string backText { get; set; }
             public string frontLang { get; set; }
             public string backLang { get; set; }
+            public int? cardId { get; set; }
             public int? deckId { get; set; }
         }
 
@@ -90,7 +91,7 @@ namespace echoStudy_webAPI.Controllers
          */
         public class CardUpdateResponse
         {
-            public int id { get; set; }
+            public List<int> ids { get; set; }
             public DateTime dateUpdated { get; set; }
         }
 
@@ -233,11 +234,11 @@ namespace echoStudy_webAPI.Controllers
 
         // Post: /Cards/{id}
         /// <summary>
-        /// Edits an existing Card
+        /// Updates cards provided through a list
         /// </summary>
         /// <remarks></remarks>
-        /// <param name="id">ID of the Card to edit</param>
-        /// <param name="cardInfo">
+        /// <param name="cardInfos">
+        /// List of cards to be updated and their data
         /// Optional: frontText, backText, frontLang, backLang, deckId
         /// </param>
         /// <response code="200">Returns the Id and DateUpdated of the edited Card</response>
@@ -246,7 +247,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at the cardId provided was not found</response>
         /// <response code="500">Database failed to complete card update despite valid request</response>
-        [HttpPost("{id}")]
+        [HttpPost("Update")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(typeof(CardUpdateResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
@@ -254,132 +255,145 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> PostCardEdit(int id, [FromBody] PostCardInfo cardInfo)
+        public async Task<IActionResult> PostCardEdit(List<PostCardInfo> cardInfos)
         {
-            // Ensure the card exists and that the owner made the request
-            Card card = await _context.Cards.FindAsync(id);
-            if (card is null)
-            {
-                return NotFound("Card id " + id + " not found");
-            }
-            if (card.UserId != _user.Id)
-            {
-                return Forbid();
-            }
+            List<int> ids = new List<int>();
 
-            //-------Update according to incoming info
-
-            // if the card is changing decks, we need to update both decks
-            int? olddeckid = null;
-            if (cardInfo.deckId is not null)
+            foreach(PostCardInfo cardInfo in cardInfos)
             {
-                olddeckid = card.DeckID;
-                card.DeckID = (int)cardInfo.deckId;
-
-                if (olddeckid != cardInfo.deckId)
+                // Ensure ID was provided
+                if(cardInfo.cardId is null)
                 {
-                    // Update/validate the new deck
-                    var newQuery = from d in _context.Decks.Include(d => d.Cards)
-                                   where d.DeckID == cardInfo.deckId
-                                   select d;
-                    Deck newDeck = await newQuery.FirstOrDefaultAsync();
-                    // Ensure the new deck is valid and then add the card and change the updated date
-                    if (newDeck is null)
+                    return BadRequest("Card ID is required for editing");
+                }
+                ids.Add((int) cardInfo.cardId);
+
+                // Ensure the card exists and that the owner made the request
+                Card card = await _context.Cards.FindAsync(cardInfo.cardId);
+                if (card is null)
+                {
+                    return NotFound("Card id " + cardInfo.cardId + " not found");
+                }
+                if (card.UserId != _user.Id)
+                {
+                    return Forbid();
+                }
+
+                //-------Update according to incoming info
+
+                // if the card is changing decks, we need to update both decks
+                int? olddeckid = null;
+                if (cardInfo.deckId is not null)
+                {
+                    olddeckid = card.DeckID;
+                    card.DeckID = (int)cardInfo.deckId;
+
+                    if (olddeckid != cardInfo.deckId)
                     {
-                        return NotFound("Deck id " + cardInfo.deckId + " not found");
+                        // Update/validate the new deck
+                        var newQuery = from d in _context.Decks.Include(d => d.Cards)
+                                       where d.DeckID == cardInfo.deckId
+                                       select d;
+                        Deck newDeck = await newQuery.FirstOrDefaultAsync();
+                        // Ensure the new deck is valid and then add the card and change the updated date
+                        if (newDeck is null)
+                        {
+                            return NotFound("Deck id " + cardInfo.deckId + " not found");
+                        }
+                        if (newDeck.UserId != _user.Id)
+                        {
+                            return Forbid();
+                        }
+                        newDeck.Cards.Add(card);
+                        newDeck.DateUpdated = DateTime.Now;
+
+                        // Update the old deck if it exists
+                        var oldQuery = from d in _context.Decks.Include(d => d.Cards)
+                                       where d.DeckID == olddeckid
+                                       select d;
+                        Deck oldDeck = await oldQuery.FirstOrDefaultAsync();
+                        if (oldDeck is not null)
+                        {
+                            oldDeck.Cards.Remove(card);
+                            oldDeck.DateUpdated = DateTime.Now;
+                        }
+                        _context.Decks.Update(oldDeck);
+                        _context.Decks.Update(newDeck);
                     }
-                    if (newDeck.UserId != _user.Id)
+                    else
                     {
-                        return Forbid();
+                        Deck deck = await _context.Decks.FindAsync(olddeckid);
+                        deck.DateUpdated = DateTime.Now;
+                        _context.Decks.Update(deck);
                     }
-                    newDeck.Cards.Add(card);
-                    newDeck.DateUpdated = DateTime.Now;
-
-                    // Update the old deck if it exists
-                    var oldQuery = from d in _context.Decks.Include(d => d.Cards)
-                                   where d.DeckID == olddeckid
-                                   select d;
-                    Deck oldDeck = await oldQuery.FirstOrDefaultAsync();
-                    if (oldDeck is not null)
+                }
+                if (cardInfo.frontText is not null)
+                {
+                    card.FrontText = cardInfo.frontText;
+                }
+                if (cardInfo.backText is not null)
+                {
+                    card.BackText = cardInfo.backText;
+                }
+                if (cardInfo.frontLang is not null)
+                {
+                    switch (cardInfo.frontLang.ToLower())
                     {
-                        oldDeck.Cards.Remove(card);
-                        oldDeck.DateUpdated = DateTime.Now;
+                        case "english":
+                            card.FrontLang = Language.English;
+                            break;
+                        case "spanish":
+                            card.FrontLang = Language.Spanish;
+                            break;
+                        case "japanese":
+                            card.FrontLang = Language.Japanese;
+                            break;
+                        case "german":
+                            card.FrontLang = Language.German;
+                            break;
+                        default:
+                            return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
                     }
-                    _context.Decks.Update(oldDeck);
-                    _context.Decks.Update(newDeck);
                 }
-                else
+                if (cardInfo.backLang is not null)
                 {
-                    Deck deck = await _context.Decks.FindAsync(olddeckid);
-                    deck.DateUpdated = DateTime.Now;
-                    _context.Decks.Update(deck);
+                    switch (cardInfo.backLang.ToLower())
+                    {
+                        case "english":
+                            card.BackLang = Language.English;
+                            break;
+                        case "spanish":
+                            card.BackLang = Language.Spanish;
+                            break;
+                        case "japanese":
+                            card.BackLang = Language.Japanese;
+                            break;
+                        case "german":
+                            card.BackLang = Language.German;
+                            break;
+                        default:
+                            return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                    }
                 }
-            }
 
-            if (cardInfo.frontText is not null)
-            {
-                card.FrontText = cardInfo.frontText;
-            }
-            if (cardInfo.backText is not null)
-            {
-                card.BackText = cardInfo.backText;
-            }
-            if (cardInfo.frontLang is not null)
-            {
-                switch (cardInfo.frontLang.ToLower())
+                // Date
+                card.DateUpdated = DateTime.Now;
+
+                // if we changed the text or language of the front or back of the card, make a call to Polly
+                if (cardInfo.frontLang is not null || cardInfo.frontText is not null)
                 {
-                    case "english":
-                        card.FrontLang = Language.English;
-                        break;
-                    case "spanish":
-                        card.FrontLang = Language.Spanish;
-                        break;
-                    case "japanese":
-                        card.FrontLang = Language.Japanese;
-                        break;
-                    case "german":
-                        card.FrontLang = Language.German;
-                        break;
-                    default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                    card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
                 }
-            }
-            if (cardInfo.backLang is not null)
-            {
-                switch (cardInfo.backLang.ToLower())
+                if (cardInfo.backLang is not null || cardInfo.backText is not null)
                 {
-                    case "english":
-                        card.BackLang = Language.English;
-                        break;
-                    case "spanish":
-                        card.BackLang = Language.Spanish;
-                        break;
-                    case "japanese":
-                        card.BackLang = Language.Japanese;
-                        break;
-                    case "german":
-                        card.BackLang = Language.German;
-                        break;
-                    default:
-                        return BadRequest("Current supported languages are English, Spanish, Japanese, and German");
+                    card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 }
+
+                // Indicate that this card was changed
+                _context.Cards.Update(card);
             }
 
-            // Dates
-            card.DateUpdated = DateTime.Now;
-
-            // if we changed the text or language of the front or back of the card, make a call to Polly
-            if (cardInfo.frontLang is not null || cardInfo.frontText is not null)
-            {
-                card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
-            }
-            if (cardInfo.backLang is not null || cardInfo.backText is not null)
-            {
-                card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
-            }
-
-            _context.Cards.Update(card);
-
+            // Try to save
             try
             {
                 await _context.SaveChangesAsync();
@@ -395,8 +409,8 @@ namespace echoStudy_webAPI.Controllers
 
             return Ok(new CardUpdateResponse
             {
-                id = card.CardID,
-                dateUpdated = card.DateUpdated
+                ids = ids,
+                dateUpdated = DateTime.Now
             });
         }
 
