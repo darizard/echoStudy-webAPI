@@ -31,8 +31,15 @@ namespace echoStudy_webAPI.Controllers
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             // before action executes
-            var token = new JwtSecurityToken(Request.Headers["Authorization"].ToString().Split(' ')[1]);
-            _user = await _um.FindByIdAsync(token.Subject);
+            if(Request.Headers.ContainsKey("Authorization"))
+            {
+                var token = new JwtSecurityToken(Request.Headers["Authorization"].ToString().Split(' ')[1]);
+                _user = await _um.FindByIdAsync(token.Subject);
+            }
+            else
+            {
+                _user = null;
+            }
 
             // ---This executes the action---
             var result = await next();

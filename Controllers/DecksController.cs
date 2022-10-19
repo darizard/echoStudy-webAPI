@@ -42,6 +42,9 @@ namespace echoStudy_webAPI.Controllers
             public DateTime date_created { get; set; }
             public DateTime date_updated { get; set; }
             public DateTime date_touched { get; set; }
+            public int? orig_deck_id { get; set; }
+            public string orig_author_id { get; set; }
+            public string orig_author_name { get; set; }
         }
 
         /**
@@ -88,10 +91,10 @@ namespace echoStudy_webAPI.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks()
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetMyDecks()
         {
             // Query the DB for the deck objects
-            var query = from d in _context.Decks.Include(d => d.Cards)
+            var query = from d in _context.Decks.Include(d => d.Cards).Include(d => d.OrigAuthor)
                         where d.UserId == _user.Id
                         select d;
             var decks = await query.ToListAsync();
@@ -113,13 +116,16 @@ namespace echoStudy_webAPI.Controllers
                     studyPercent = (double) d.StudyPercent,
                     date_created = d.DateCreated,
                     date_touched = d.DateTouched,
-                    date_updated = d.DateUpdated
+                    date_updated = d.DateUpdated,
+                    orig_deck_id = d.OrigDeckId,
+                    orig_author_id = d.OrigAuthorId,
+                    orig_author_name = d.OrigAuthor?.UserName
                 });
             }
 
             return Ok(deckInfo);
         }
-
+        /*
         // ******TODO: Does not depend at all on current user. Move to a "Public" controller?
         // GET: /Decks/Public
         /// <summary>
@@ -148,7 +154,10 @@ namespace echoStudy_webAPI.Controllers
                             ownerId = d.UserId,
                             date_created = d.DateCreated,
                             date_touched = d.DateTouched,
-                            date_updated = d.DateUpdated
+                            date_updated = d.DateUpdated,
+                            orig_deck_id = d.OrigDeckId,
+                            orig_author_id = d.OrigAuthorId,
+                            orig_author_name = d.OrigAuthor.UserName
                         };
             return Ok(await query.ToListAsync());
         }
@@ -202,10 +211,10 @@ namespace echoStudy_webAPI.Controllers
                         };
             return Ok(await query.ToListAsync());
         }
-
+        */
         // GET: /Decks/{id}
         /// <summary>
-        /// Retrieves one Deck specified by Id. Cannot be used to retrieve a public deck. See Public controller.
+        /// Retrieves one Deck specified by Id. NOT used to retrieve a public deck owned by another user. See Public controller.
         /// </summary>
         /// <remarks>
         /// <param name="id">Deck ID</param>
@@ -226,7 +235,7 @@ namespace echoStudy_webAPI.Controllers
             // d.DeckID is unique; queryDeck returns only one deck
 
             // first query to see if the desired deck exists
-            var queryDeck = from d in _context.Decks.Include(d => d.Cards)
+            var queryDeck = from d in _context.Decks.Include(d => d.Cards).Include(d => d.OrigAuthor)
                             where d.DeckID == id
                             select d;
 
@@ -256,7 +265,10 @@ namespace echoStudy_webAPI.Controllers
                 studyPercent = (double) deck.StudyPercent,
                 date_created = deck.DateCreated,
                 date_touched = deck.DateTouched,
-                date_updated = deck.DateUpdated
+                date_updated = deck.DateUpdated,
+                orig_deck_id = deck.OrigDeckId,
+                orig_author_id = deck.OrigAuthorId,
+                orig_author_name = deck.OrigAuthor?.UserName
             });
         }
 
@@ -374,6 +386,10 @@ namespace echoStudy_webAPI.Controllers
             // Dates
             deck.DateUpdated = DateTime.Now;
 
+            // Deck has been updated, break any connection with original deck if this was a shared deck
+            deck.OrigDeckId = null;
+            deck.OrigAuthorId = null;
+
             // Save the deck
             _context.Decks.Update(deck);
 
@@ -398,7 +414,7 @@ namespace echoStudy_webAPI.Controllers
             });
         }
 
-        // POST: api/Decks
+        // POST: /Decks
         /// <summary>
         /// Creates decks for the currently authenticated user through the provided list
         /// </summary>
@@ -569,6 +585,7 @@ namespace echoStudy_webAPI.Controllers
                 return Forbid();
             }
 
+            await SeverShares(new List<int> { id });
             _context.Decks.Remove(deck);
 
             // Try to save
@@ -617,6 +634,14 @@ namespace echoStudy_webAPI.Controllers
                         select d;
 
             List<Deck> userDecks = await query.ToListAsync();
+            List<int> userDeckIds = new();
+            foreach(Deck deck in userDecks)
+            {
+                userDeckIds.Add(deck.DeckID);
+            }
+
+            await SeverShares(userDeckIds);
+
             foreach (Deck deck in userDecks)
             {
                 _context.Decks.Remove(deck);
@@ -637,6 +662,19 @@ namespace echoStudy_webAPI.Controllers
             }
 
             return NoContent();
+        }
+
+        // this only tracks the changes to OrigDeckIds. SaveChanges must be executed in the calling function.
+        private async Task SeverShares(List<int> deckIds)
+        {
+            var query = _context.Decks.Where(x => deckIds.Contains(x.DeckID));
+            List<Deck> derivedDecksList = await query.ToListAsync();
+            _context.UpdateRange(derivedDecksList);
+
+            foreach(Deck d in derivedDecksList)
+            {
+                d.OrigDeckId = null;
+            }
         }
     }
 }

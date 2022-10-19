@@ -171,7 +171,7 @@ namespace echoStudy_webAPI.Data
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())// we can add more to the JWT payload here
                 }),
                 // TEST VALUE. Change token expiry window for staging/prod
-                Expires = DateTime.UtcNow.AddMinutes(5),
+                Expires = DateTime.UtcNow.AddMinutes(120),
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(tokenKey),
                     SecurityAlgorithms.HmacSha256Signature)

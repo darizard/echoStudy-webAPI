@@ -336,6 +336,12 @@ namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<string>("OrigAuthorId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("OrigDeckId")
+                        .HasColumnType("int");
+
                     b.Property<double?>("StudyPercent")
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("float");
@@ -349,6 +355,10 @@ namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("DeckID");
+
+                    b.HasIndex("OrigAuthorId");
+
+                    b.HasIndex("OrigDeckId");
 
                     b.ToTable("Decks");
                 });
@@ -385,30 +395,6 @@ namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
                     b.HasKey("CategoryID");
 
                     b.ToTable("DeckCategories");
-                });
-
-            modelBuilder.Entity("echoStudy_webAPI.Models.DeckShare", b =>
-                {
-                    b.Property<int>("ClonedDeckId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("OrigAuthorId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("ShareDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("SourceDeckId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ClonedDeckId");
-
-                    b.HasIndex("OrigAuthorId");
-
-                    b.HasIndex("SourceDeckId");
-
-                    b.ToTable("DeckShares");
                 });
 
             modelBuilder.Entity("echoStudy_webAPI.Models.RefreshToken", b =>
@@ -566,29 +552,19 @@ namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
                     b.Navigation("Deck");
                 });
 
-            modelBuilder.Entity("echoStudy_webAPI.Models.DeckShare", b =>
+            modelBuilder.Entity("echoStudy_webAPI.Models.Deck", b =>
                 {
-                    b.HasOne("echoStudy_webAPI.Models.Deck", "ClonedDeck")
-                        .WithMany()
-                        .HasForeignKey("ClonedDeckId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("echoStudy_webAPI.Areas.Identity.Data.EchoUser", "OrigAuthor")
                         .WithMany()
-                        .HasForeignKey("OrigAuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("OrigAuthorId");
 
-                    b.HasOne("echoStudy_webAPI.Models.Deck", "SourceDeck")
+                    b.HasOne("echoStudy_webAPI.Models.Deck", "OrigDeck")
                         .WithMany()
-                        .HasForeignKey("SourceDeckId");
-
-                    b.Navigation("ClonedDeck");
+                        .HasForeignKey("OrigDeckId");
 
                     b.Navigation("OrigAuthor");
 
-                    b.Navigation("SourceDeck");
+                    b.Navigation("OrigDeck");
                 });
 
             modelBuilder.Entity("echoStudy_webAPI.Models.RefreshToken", b =>

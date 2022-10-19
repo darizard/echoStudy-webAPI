@@ -13,12 +13,13 @@ using System;
 using echoStudy_webAPI.Data;
 using Amazon.S3.Model;
 using static echoStudy_webAPI.Data.DbInitializer;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace echoStudy_webAPI.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    [Authorize]
+    [AllowAnonymous]
     public class PublicController : EchoUserControllerBase
     {
         EchoStudyDB _context;
@@ -38,11 +39,19 @@ namespace echoStudy_webAPI.Controllers
             public DateTime dateCreated { get; set; }
         }
 
+
+        // GET: /Public/Decks
+        /// <summary>
+        /// Retrieves all Public Decks
+        /// </summary>
+        /// <remarks>
+        /// All Decks with an access level of Public
+        /// </remarks>
+        /// <response code="200">Returns all Public Deck objects</response>
         [HttpGet("decks")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks()
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDecks()
         {
             // Query the DB for the deck objects
             var query = from d in _context.Decks.Include(d => d.Cards)
@@ -67,7 +76,10 @@ namespace echoStudy_webAPI.Controllers
                     studyPercent = (double) d.StudyPercent,
                     date_created = d.DateCreated,
                     date_touched = d.DateTouched,
-                    date_updated = d.DateUpdated
+                    date_updated = d.DateUpdated,
+                    orig_deck_id = d.OrigDeckId,
+                    orig_author_id = d.OrigAuthorId,
+                    orig_author_name = d.OrigAuthorId is null || d.OrigAuthorId == "" ? null : d.OrigAuthor.UserName
                 });
             }
 
@@ -90,6 +102,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="500">Database failed to save despite valid request</response>
         [HttpPost("copy/deck={id}")]
         [Produces("application/json")]
+        [Authorize]
         [ProducesResponseType(typeof(DeckCreationResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
@@ -98,11 +111,16 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> ShareDeck(int id)
         {
+            if(_user is null)
+            {
+                return Unauthorized(new { error = "You are not logged in" });
+            }
+
             // Ensure it exists
             Deck deck = await _context.Decks.FindAsync(id);
             if (deck is null)
             {
-                return NotFound();
+                return NotFound(new { error = $"Deck with id {id} does not exist" });
             }
             // Ensure it's public
             if(deck.Access != Access.Public)
@@ -112,7 +130,7 @@ namespace echoStudy_webAPI.Controllers
             // Ensure the owner isn't copying their own deck
             if(deck.UserId == _user.Id)
             {
-                return BadRequest();
+                return BadRequest(new { error = "This deck already belongs to you!" });
             }
 
             // Copy the deck
@@ -128,7 +146,9 @@ namespace echoStudy_webAPI.Controllers
                 UserId = _user.Id,
                 DateCreated = DateTime.Now,
                 DateTouched = DateTime.Now,
-                DateUpdated = DateTime.Now
+                DateUpdated = DateTime.Now,
+                OrigDeckId = deck.OrigDeckId is null ? deck.DeckID : deck.OrigDeckId,
+                OrigAuthorId = deck.OrigAuthorId is null || deck.OrigAuthorId == "" ? deck.UserId : deck.OrigAuthorId
             };
 
             // Grab and copy all the cards
@@ -179,7 +199,7 @@ namespace echoStudy_webAPI.Controllers
             }
 
             // Indicate success
-            return CreatedAtAction("PublicDeckCopy", new DeckCopyResponse
+            return CreatedAtAction("ShareDeck", new DeckCopyResponse
             {
                 id = copyDeck.DeckID,
                 dateCreated = deck.DateCreated
