@@ -50,16 +50,22 @@ namespace echoStudy_webAPI.Models
         [ForeignKey("EchoUser")]
         public virtual string UserId { get; set; }
 
-        public virtual ICollection<DeckCategory> DeckCategories { get; set; }
-        public virtual ICollection<Card> Cards { get; set; }
-
-        // These values should be manually handled in the controller
         [ScaffoldColumn(false)]
         public DateTime DateCreated { get; set; }
         [ScaffoldColumn(false)]
         public DateTime DateUpdated { get; set; }
         [ScaffoldColumn(false)]
         public DateTime DateTouched { get; set; }
+
+        [ForeignKey("OrigDeck")]
+        public int? OrigDeckId { get; set; }
+        [ForeignKey("OrigAuthor")]
+        public string OrigAuthorId { get; set; }
+
+        public virtual ICollection<DeckCategory> DeckCategories { get; set; }
+        public virtual ICollection<Card> Cards { get; set; }
+        public virtual Deck OrigDeck { get; set; }
+        public virtual EchoUser OrigAuthor { get; set; }
 
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public double? StudyPercent 

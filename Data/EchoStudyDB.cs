@@ -18,7 +18,6 @@ namespace echoStudy_webAPI.Models
 
         public DbSet<Card> Cards { get; set; }
         public DbSet<Deck> Decks { get; set; }
-        public DbSet<DeckShare> DeckShares { get; set; }
         public DbSet<DeckCategory> DeckCategories{ get; set; }
         public DbSet<Session> Sessions{ get; set; }
 

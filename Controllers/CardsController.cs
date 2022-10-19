@@ -232,7 +232,7 @@ namespace echoStudy_webAPI.Controllers
             return Ok(await query.FirstAsync());
         }
 
-        // Post: /Cards/{id}
+        // Post: /Cards/Update
         /// <summary>
         /// Updates cards provided through a list
         /// </summary>
@@ -280,15 +280,19 @@ namespace echoStudy_webAPI.Controllers
                 }
 
                 //-------Update according to incoming info
+                int currentDeckId = card.DeckID;
+                var currentDeckQuery = from d in _context.Decks.Include(d => d.Cards)
+                               where d.DeckID == currentDeckId
+                               select d;
+                Deck currentDeck = await currentDeckQuery.FirstOrDefaultAsync();
+                if (currentDeck is null) return StatusCode(500, new { error = "This card's deck was not found" });
 
-                // if the card is changing decks, we need to update both decks
-                int? olddeckid = null;
+                // if the card is changing decks, we need to update the new deck as well
                 if (cardInfo.deckId is not null)
                 {
-                    olddeckid = card.DeckID;
                     card.DeckID = (int)cardInfo.deckId;
 
-                    if (olddeckid != cardInfo.deckId)
+                    if (currentDeckId != cardInfo.deckId)
                     {
                         // Update/validate the new deck
                         var newQuery = from d in _context.Decks.Include(d => d.Cards)
@@ -306,25 +310,10 @@ namespace echoStudy_webAPI.Controllers
                         }
                         newDeck.Cards.Add(card);
                         newDeck.DateUpdated = DateTime.Now;
-
-                        // Update the old deck if it exists
-                        var oldQuery = from d in _context.Decks.Include(d => d.Cards)
-                                       where d.DeckID == olddeckid
-                                       select d;
-                        Deck oldDeck = await oldQuery.FirstOrDefaultAsync();
-                        if (oldDeck is not null)
-                        {
-                            oldDeck.Cards.Remove(card);
-                            oldDeck.DateUpdated = DateTime.Now;
-                        }
-                        _context.Decks.Update(oldDeck);
                         _context.Decks.Update(newDeck);
-                    }
-                    else
-                    {
-                        Deck deck = await _context.Decks.FindAsync(olddeckid);
-                        deck.DateUpdated = DateTime.Now;
-                        _context.Decks.Update(deck);
+
+                        // Remove the card from the current (old) deck
+                        currentDeck.Cards.Remove(card);
                     }
                 }
                 if (cardInfo.frontText is not null)
@@ -379,6 +368,10 @@ namespace echoStudy_webAPI.Controllers
                 // Date
                 card.DateUpdated = DateTime.Now;
 
+                currentDeck.DateUpdated = DateTime.Now;
+                currentDeck.OrigAuthorId = null;
+                currentDeck.OrigDeckId = null;
+
                 // if we changed the text or language of the front or back of the card, make a call to Polly
                 if (cardInfo.frontLang is not null || cardInfo.frontText is not null)
                 {
@@ -389,8 +382,9 @@ namespace echoStudy_webAPI.Controllers
                     card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 }
 
-                // Indicate that this card was changed
+                // Indicate that this card and its deck were changed
                 _context.Cards.Update(card);
+                _context.Decks.Update(currentDeck);
             }
 
             // Try to save
@@ -535,6 +529,10 @@ namespace echoStudy_webAPI.Controllers
                 // update related deck's DateUpdated
                 card.Deck = deck;
                 deck.DateUpdated = card.DateUpdated;
+
+                // updating the deck breaks any sharing connections
+                deck.OrigDeckId = null;
+                deck.OrigAuthorId = null;
                 _context.Decks.Update(deck);
 
                 // Ready to add
