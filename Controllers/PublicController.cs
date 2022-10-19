@@ -51,7 +51,7 @@ namespace echoStudy_webAPI.Controllers
         [HttpGet("decks")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDecks()
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks()
         {
             // Query the DB for the deck objects
             var query = from d in _context.Decks.Include(d => d.Cards)
