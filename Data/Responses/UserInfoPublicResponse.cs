@@ -12,13 +12,14 @@ namespace echoStudy_webAPI.Data.Responses
          * User's public display name
         */
         public string Username { get; set; }
+        /***
+        * URL to the user's profile picture
+        */
+        public string ProfilePicture { get; set; }
         /**
          * All of the user's public decks
          */
         public List<DeckInfo> Decks { get; set; }
-        /***
-         * URL to the user's profile picture
-         */
-        public string ProfilePicture { get; set; }
+
     }
 }

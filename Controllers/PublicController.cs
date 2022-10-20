@@ -14,6 +14,9 @@ using echoStudy_webAPI.Data;
 using Amazon.S3.Model;
 using static echoStudy_webAPI.Data.DbInitializer;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using echoStudy_webAPI.Data.Responses;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -205,6 +208,129 @@ namespace echoStudy_webAPI.Controllers
                 id = copyDeck.DeckID,
                 dateCreated = deck.DateCreated
             });
+        }
+
+        /// <summary>
+        /// Retrieves an echo user's public details through provided username or email
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="username">Username OR email of the target user</param>
+        /// <response code="200">Returns nonsensitive, public details of a user</response>
+        /// <response code="400">Username was not provided</response>
+        /// <response code="404">User does not exist</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserInfoPublicResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [HttpGet("users/{username}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserPublicInfo(string username)
+        {
+            // Grab the user
+            EchoUser user;
+            if (username is not null)
+            {
+                if (username.Contains('@'))
+                {
+                    user = await _um.FindByEmailAsync(username);
+                }
+                else
+                {
+                    user = await _um.FindByNameAsync(username);
+                }
+            }
+            else
+            {
+                return BadRequest("Username is required to find the user");
+            }
+
+            // User not found
+            if (user is null)
+            {
+                return NotFound();
+            }
+
+            // Get their public decks
+            var query = from d in _context.Decks
+                        where d.UserId == user.Id && d.Access == Access.Public
+                        select new DeckInfo
+                        {
+                            id = d.DeckID,
+                            title = d.Title,
+                            description = d.Description,
+                            access = d.Access.ToString(),
+                            default_flang = d.DefaultFrontLang.ToString(),
+                            default_blang = d.DefaultBackLang.ToString(),
+                            cards = d.Cards.Select(c => c.CardID).ToList(),
+                            ownerId = d.UserId,
+                            date_created = d.DateCreated,
+                            date_touched = d.DateTouched,
+                            date_updated = d.DateUpdated
+                        };
+
+            // Return their details
+            return Ok(new UserInfoPublicResponse
+            {
+                Username = user.UserName,
+                ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro",
+                Decks = await query.ToListAsync()
+            });
+        }
+
+        /// <summary>
+        /// Retrieves an echo user's public details through provided username or email
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <response code="200">Returns nonsensitive, public details of every user</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(List<UserInfoPublicResponse>), StatusCodes.Status200OK)]
+        [HttpGet("users")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAllUserPublicInfo()
+        {
+            // The users
+            var userQuery = from u in _context.Users
+                            select u;
+            var users = await userQuery.ToListAsync();
+
+            // Build a UserPublicInfoResponse object for every user
+            List<UserInfoPublicResponse> userInfo = new List<UserInfoPublicResponse>();
+            foreach(EchoUser user in users)
+            {
+                // Things that can immediately be assigned
+                UserInfoPublicResponse publicInfo = new UserInfoPublicResponse
+                {
+                    Username = user.UserName,
+                    ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro"
+                };
+
+                // Decks must be pulled from the database
+                var deckQuery = from d in _context.Decks
+                            where d.UserId == user.Id && d.Access == Access.Public
+                            select new DeckInfo
+                            {
+                                id = d.DeckID,
+                                title = d.Title,
+                                description = d.Description,
+                                access = d.Access.ToString(),
+                                default_flang = d.DefaultFrontLang.ToString(),
+                                default_blang = d.DefaultBackLang.ToString(),
+                                cards = d.Cards.Select(c => c.CardID).ToList(),
+                                ownerId = d.UserId,
+                                date_created = d.DateCreated,
+                                date_touched = d.DateTouched,
+                                date_updated = d.DateUpdated
+                            };
+                publicInfo.Decks = await deckQuery.ToListAsync();
+
+                // Finally add their info to the list
+                userInfo.Add(publicInfo);
+            }
+
+            // Return their details
+            return Ok(userInfo);
         }
     }
 }
