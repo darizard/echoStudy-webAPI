@@ -38,7 +38,8 @@ namespace echoStudy_webAPI.Controllers
             public string default_blang { get; set; }
             public string ownerId { get; set; }
             public List<int> cards { get; set; }
-            public double studyPercent { get; set; }
+            public double studiedPercent { get; set; }
+            public double masteredPercent { get; set; }
             public DateTime date_created { get; set; }
             public DateTime date_updated { get; set; }
             public DateTime date_touched { get; set; }
@@ -113,7 +114,8 @@ namespace echoStudy_webAPI.Controllers
                     default_blang = d.DefaultBackLang.ToString(),
                     cards = d.Cards.Select(c => c.CardID).ToList(),
                     ownerId = d.UserId,
-                    studyPercent = (double) d.StudyPercent,
+                    studiedPercent = (double) d.StudyPercent,
+                    masteredPercent = (double)d.MasteredPercent,
                     date_created = d.DateCreated,
                     date_touched = d.DateTouched,
                     date_updated = d.DateUpdated,
@@ -262,7 +264,8 @@ namespace echoStudy_webAPI.Controllers
                 default_blang = deck.DefaultBackLang.ToString(),
                 cards = deck.Cards.Select(c => c.CardID).ToList(),
                 ownerId = deck.UserId,
-                studyPercent = (double) deck.StudyPercent,
+                studiedPercent = (double) deck.StudyPercent,
+                masteredPercent = (double) deck.MasteredPercent,
                 date_created = deck.DateCreated,
                 date_touched = deck.DateTouched,
                 date_updated = deck.DateUpdated,

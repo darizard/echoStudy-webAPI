@@ -87,7 +87,7 @@ namespace echoStudy_webAPI.Models
                 double studyCount = 0.0;
                 foreach(Card c in Cards)
                 {
-                    if (c.DateTouched != c.DateCreated && c.DateTouched >= c.DateUpdated)
+                    if (c.Score != 0)
                     {
                         studyCount++;
                     }
@@ -95,6 +95,36 @@ namespace echoStudy_webAPI.Models
                 return Math.Round(studyCount / Cards.Count, 4);
             } 
             private set { } 
+        }
+
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public double? MasteredPercent
+        {
+            get
+            {
+                if (_context is null)
+                {
+                    return 0.0;
+                }
+
+                _context.Decks.Include(d => d.Cards);
+
+                if (Cards is null || !Cards.Any())
+                {
+                    return 0.0;
+                }
+
+                double masteredCount = 0.0;
+                foreach (Card c in Cards)
+                {
+                    if (c.Score > 3)
+                    {
+                        masteredCount++;
+                    }
+                }
+                return Math.Round(masteredCount / Cards.Count, 4);
+            }
+            private set { }
         }
     }
 
