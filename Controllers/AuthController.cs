@@ -15,6 +15,8 @@ using System.Linq;
 using System.Collections.Generic;
 using echoStudy_webAPI.Data.Requests;
 using static echoStudy_webAPI.Controllers.DecksController;
+using System.Security.Cryptography;
+using System.Text;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -524,7 +526,8 @@ namespace echoStudy_webAPI.Controllers
             return Ok(new UserInfoPublicResponse
             {
                 Username = user.UserName,
-                Decks = await query.ToListAsync()
+                Decks = await query.ToListAsync(),
+                ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro"
             });
         }
 
