@@ -10,6 +10,7 @@ using echoStudy_webAPI.Data;
 using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
 using ThirdParty.Ionic.Zlib;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -37,6 +38,7 @@ namespace echoStudy_webAPI.Controllers
             public string default_flang { get; set; }
             public string default_blang { get; set; }
             public string ownerId { get; set; }
+            public string ownerUserName { get; set; }
             public List<int> cards { get; set; }
             public double studiedPercent { get; set; }
             public double masteredPercent { get; set; }
@@ -95,7 +97,9 @@ namespace echoStudy_webAPI.Controllers
         public async Task<ActionResult<IEnumerable<DeckInfo>>> GetMyDecks()
         {
             // Query the DB for the deck objects
-            var query = from d in _context.Decks.Include(d => d.Cards).Include(d => d.OrigAuthor)
+            var query = from d in _context.Decks.Include(d => d.Cards)
+                                                .Include(d => d.OrigAuthor)
+                                                .Include(d => d.DeckOwner)
                         where d.UserId == _user.Id
                         select d;
             var decks = await query.ToListAsync();
@@ -114,6 +118,7 @@ namespace echoStudy_webAPI.Controllers
                     default_blang = d.DefaultBackLang.ToString(),
                     cards = d.Cards.Select(c => c.CardID).ToList(),
                     ownerId = d.UserId,
+                    ownerUserName = d.DeckOwner.UserName,
                     studiedPercent = (double) d.StudyPercent,
                     masteredPercent = (double)d.MasteredPercent,
                     date_created = d.DateCreated,
@@ -237,7 +242,9 @@ namespace echoStudy_webAPI.Controllers
             // d.DeckID is unique; queryDeck returns only one deck
 
             // first query to see if the desired deck exists
-            var queryDeck = from d in _context.Decks.Include(d => d.Cards).Include(d => d.OrigAuthor)
+            var queryDeck = from d in _context.Decks.Include(d => d.Cards)
+                                                    .Include(d => d.OrigAuthor)
+                                                    .Include(d => d.DeckOwner)
                             where d.DeckID == id
                             select d;
 
@@ -264,6 +271,7 @@ namespace echoStudy_webAPI.Controllers
                 default_blang = deck.DefaultBackLang.ToString(),
                 cards = deck.Cards.Select(c => c.CardID).ToList(),
                 ownerId = deck.UserId,
+                ownerUserName = deck.DeckOwner.UserName,
                 studiedPercent = (double) deck.StudyPercent,
                 masteredPercent = (double) deck.MasteredPercent,
                 date_created = deck.DateCreated,

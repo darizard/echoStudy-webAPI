@@ -58,6 +58,8 @@ namespace echoStudy_webAPI.Controllers
         {
             // Query the DB for the deck objects
             var query = from d in _context.Decks.Include(d => d.Cards)
+                                                .Include(d => d.DeckOwner)
+                                                .Include(d => d.OrigAuthor)
                         where d.Access == Access.Public
                         select d;
             var decks = await query.ToListAsync();
@@ -76,6 +78,7 @@ namespace echoStudy_webAPI.Controllers
                     default_blang = d.DefaultBackLang.ToString(),
                     cards = d.Cards.Select(c => c.CardID).ToList(),
                     ownerId = d.UserId,
+                    ownerUserName = d.DeckOwner.UserName,
                     studiedPercent = (double) d.StudyPercent,
                     masteredPercent = (double) d.MasteredPercent,
                     date_created = d.DateCreated,

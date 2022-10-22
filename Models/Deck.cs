@@ -47,7 +47,7 @@ namespace echoStudy_webAPI.Models
         [StringLength(50)]
         public Language DefaultBackLang { get; set; }
 
-        [ForeignKey("EchoUser")]
+        [ForeignKey("DeckOwner")]
         public virtual string UserId { get; set; }
 
         [ScaffoldColumn(false)]
@@ -64,9 +64,10 @@ namespace echoStudy_webAPI.Models
 
         public virtual ICollection<DeckCategory> DeckCategories { get; set; }
         public virtual ICollection<Card> Cards { get; set; }
+        public virtual EchoUser DeckOwner { get; set; }
         public virtual Deck OrigDeck { get; set; }
         public virtual EchoUser OrigAuthor { get; set; }
-
+        
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         public double? StudyPercent 
         { 
