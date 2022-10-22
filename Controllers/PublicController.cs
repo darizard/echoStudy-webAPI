@@ -50,17 +50,20 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks>
         /// All Decks with an access level of Public
         /// </remarks>
-        /// <response code="200">Returns all Public Deck objects</response>
+        /// <response code="200">Returns all Public Deck objects not owned by the currently authenticated user</response>
         [HttpGet("decks")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetDecks()
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDecks()
         {
+            string userId = _user?.Id;
+
             // Query the DB for the deck objects
             var query = from d in _context.Decks.Include(d => d.Cards)
                                                 .Include(d => d.DeckOwner)
                                                 .Include(d => d.OrigAuthor)
-                        where d.Access == Access.Public
+                        where d.Access == Access.Public &&
+                              d.UserId != userId
                         select d;
             var decks = await query.ToListAsync();
 
