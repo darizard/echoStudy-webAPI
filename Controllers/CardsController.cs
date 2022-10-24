@@ -258,6 +258,7 @@ namespace echoStudy_webAPI.Controllers
         public async Task<IActionResult> PostCardEdit(List<PostCardInfo> cardInfos)
         {
             List<int> ids = new List<int>();
+            DateTime lastUpdatedTime = DateTime.Now;
 
             foreach(PostCardInfo cardInfo in cardInfos)
             {
@@ -308,9 +309,10 @@ namespace echoStudy_webAPI.Controllers
                         {
                             return Forbid();
                         }
+
+                        lastUpdatedTime = DateTime.Now;
                         newDeck.Cards.Add(card);
-                        newDeck.DateUpdated = DateTime.Now;
-                        _context.Decks.Update(newDeck);
+                        newDeck.DateUpdated = lastUpdatedTime;
 
                         // Remove the card from the current (old) deck
                         currentDeck.Cards.Remove(card);
@@ -365,13 +367,6 @@ namespace echoStudy_webAPI.Controllers
                     }
                 }
 
-                // Date
-                card.DateUpdated = DateTime.Now;
-
-                currentDeck.DateUpdated = DateTime.Now;
-                currentDeck.OrigAuthorId = null;
-                currentDeck.OrigDeckId = null;
-
                 // if we changed the text or language of the front or back of the card, make a call to Polly
                 if (cardInfo.frontLang is not null || cardInfo.frontText is not null)
                 {
@@ -382,9 +377,12 @@ namespace echoStudy_webAPI.Controllers
                     card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 }
 
-                // Indicate that this card and its deck were changed
-                _context.Cards.Update(card);
-                _context.Decks.Update(currentDeck);
+                // Update date(s) modified and share metadata
+                lastUpdatedTime = DateTime.Now;
+                card.DateUpdated = lastUpdatedTime;
+                currentDeck.DateUpdated = lastUpdatedTime;
+                currentDeck.OrigAuthorId = null;
+                currentDeck.OrigDeckId = null;
             }
 
             // Try to save
@@ -404,7 +402,7 @@ namespace echoStudy_webAPI.Controllers
             return Ok(new CardUpdateResponse
             {
                 ids = ids,
-                dateUpdated = DateTime.Now
+                dateUpdated = lastUpdatedTime,  // most recent update if batched
             });
         }
 
@@ -516,9 +514,10 @@ namespace echoStudy_webAPI.Controllers
                 }
 
                 // Assign it dates and a score of 0
-                card.DateCreated = DateTime.Now;
-                card.DateTouched = DateTime.Now;
-                card.DateUpdated = DateTime.Now;
+                DateTime creationTime = DateTime.Now;
+                card.DateCreated = creationTime;
+                card.DateTouched = creationTime;
+                card.DateUpdated = creationTime;
                 card.Score = 0;
                 card.DeckPosition = "";
 
@@ -533,7 +532,6 @@ namespace echoStudy_webAPI.Controllers
                 // updating the deck breaks any sharing connections
                 deck.OrigDeckId = null;
                 deck.OrigAuthorId = null;
-                _context.Decks.Update(deck);
 
                 // Ready to add
                 _context.Cards.Add(card);
@@ -623,12 +621,11 @@ namespace echoStudy_webAPI.Controllers
                 }
 
                 // Update touched date on the card and deck
-                card.DateTouched = DateTime.Now;
-                deck.DateTouched = DateTime.Now;
+                DateTime studiedTime = DateTime.Now;
+                card.DateTouched = studiedTime;
+                deck.DateTouched = studiedTime;
 
                 // Update the card and deck
-                _context.Cards.Update(card);
-                _context.Decks.Update(deck);
                 ids.Add(card.CardID);
             }
 

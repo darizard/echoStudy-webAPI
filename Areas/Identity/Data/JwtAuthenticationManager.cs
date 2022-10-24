@@ -124,7 +124,6 @@ namespace echoStudy_webAPI.Data
             }
 
             storedRefreshToken.Used = true;
-            _context.RefreshTokens.Update(storedRefreshToken);
             await _context.SaveChangesAsync();
 
             // ensure the user id encoded in the JWT exists in the database
