@@ -7,6 +7,6 @@ namespace echoStudy_webAPI.Areas.Identity.Data
 {
     public class EchoUser : IdentityUser
     {
-        public DateTime? DateCreated { get; set; }
+        public DateTime DateCreated { get; set; }
     }
 }
