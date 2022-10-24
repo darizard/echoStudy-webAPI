@@ -123,7 +123,8 @@ namespace echoStudy_webAPI.Controllers
             {
                 UserName = registerUserInfo.UserName,
                 Email = registerUserInfo.Email,
-                PhoneNumber = registerUserInfo.PhoneNumber
+                PhoneNumber = registerUserInfo.PhoneNumber,
+                DateCreated = DateTime.Now
             };
             var identityResult = await _um.CreateAsync(user, registerUserInfo.Password);
             if(identityResult.Succeeded)
@@ -342,6 +343,33 @@ namespace echoStudy_webAPI.Controllers
         }
 
         /// <summary>
+        /// Temporary method to set the datetime of all users who have it as null
+        /// </summary>
+        [Produces("application/json")]
+        [HttpGet("setcreationdates")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SetDates()
+        {
+            var query = from u in _context.Users
+                        select u;
+
+            var users = await query.ToListAsync();
+
+            foreach(EchoUser user in users)
+            {
+                if(user.DateCreated is null)
+                {
+                    user.DateCreated = DateTime.Now;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Return their data
+            return NoContent();
+        }
+
+        /// <summary>
         /// Retrieves all of the logged in user's information
         /// </summary>
         /// <remarks>
@@ -373,7 +401,8 @@ namespace echoStudy_webAPI.Controllers
                 Email = user.Email,
                 Username = user.UserName,
                 PhoneNumber = user.PhoneNumber,
-                Id = user.Id
+                Id = user.Id,
+                DateCreated = (DateTime) user.DateCreated
             });
         }
 

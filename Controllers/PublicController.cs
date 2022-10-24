@@ -280,12 +280,13 @@ namespace echoStudy_webAPI.Controllers
             {
                 Username = user.UserName,
                 ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro",
+                DateCreated = (DateTime) user.DateCreated,
                 Decks = await query.ToListAsync()
             });
         }
 
         /// <summary>
-        /// Retrieves an echo user's public details through provided username or email
+        /// Retrieves all echo users' public details through provided username or email
         /// </summary>
         /// <remarks>
         /// </remarks>
@@ -309,7 +310,8 @@ namespace echoStudy_webAPI.Controllers
                 UserInfoPublicResponse publicInfo = new UserInfoPublicResponse
                 {
                     Username = user.UserName,
-                    ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro"
+                    ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro",
+                    DateCreated = (DateTime) user.DateCreated
                 };
 
                 // Decks must be pulled from the database

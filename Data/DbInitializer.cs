@@ -514,6 +514,7 @@ namespace echoStudy_webAPI.Data
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
                     PhoneNumber = "123-456-7890",
+                    DateCreated = DateTime.Now,
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -526,6 +527,7 @@ namespace echoStudy_webAPI.Data
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
                     PhoneNumber = "123-456-7890",
+                    DateCreated = DateTime.Now,
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -538,6 +540,7 @@ namespace echoStudy_webAPI.Data
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
                     PhoneNumber = "123-456-7890",
+                    DateCreated = DateTime.Now,
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -550,6 +553,7 @@ namespace echoStudy_webAPI.Data
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
                     PhoneNumber = "123-456-7890",
+                    DateCreated = DateTime.Now,
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -562,6 +566,7 @@ namespace echoStudy_webAPI.Data
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
                     PhoneNumber = "123-456-7890",
+                    DateCreated = DateTime.Now,
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -574,6 +579,7 @@ namespace echoStudy_webAPI.Data
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
                     PhoneNumber = "123-456-7890",
+                    DateCreated = DateTime.Now,
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
@@ -586,6 +592,7 @@ namespace echoStudy_webAPI.Data
                     EmailConfirmed = true,
                     PhoneNumberConfirmed = true,
                     PhoneNumber = "123-456-7890",
+                    DateCreated = DateTime.Now,
                     SecurityStamp = Guid.NewGuid().ToString("D")
                 };
 
