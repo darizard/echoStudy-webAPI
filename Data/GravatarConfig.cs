@@ -10,7 +10,7 @@ namespace echoStudy_webAPI.Data
     {
         public static string GenerateGravatarURL(EchoUser user)
         {
-            string s = Convert.ToHexString(MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())));
+            string s = Convert.ToHexString(MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower()))).ToLower();
             return "https://gravatar.com/avatar/" + s + "?d=retro";
         }
 
