@@ -111,49 +111,49 @@ namespace echoStudy_webAPI.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDeck(int id)
+        public async Task<ActionResult<DeckInfo>> GetPublicDeck(int id)
         {
             // Query the DB for the deck objects
             var query = from d in _context.Decks.Include(d => d.Cards)
                                                 .Include(d => d.DeckOwner)
                                                 .Include(d => d.OrigAuthor)
-                        where d.Access == Access.Public 
-                           && d.DeckID == id
+                        where d.DeckID == id
                         select d;
-            var decks = await query.ToListAsync();
+            var deck = await query.FirstOrDefaultAsync();
 
-            if(!decks.Any())
+            if(deck is null)
             {
                 return NotFound(new {error = $"Deck id {id} not found"});
             }
 
-            // Build the deck info objects
-            List<DeckInfo> deckInfo = new List<DeckInfo>();
-            foreach (Deck d in decks)
+            if(deck.Access != Access.Public)
             {
-                deckInfo.Add(new DeckInfo
-                {
-                    id = d.DeckID,
-                    title = d.Title,
-                    description = d.Description,
-                    access = d.Access.ToString(),
-                    default_flang = d.DefaultFrontLang.ToString(),
-                    default_blang = d.DefaultBackLang.ToString(),
-                    cards = d.Cards.Select(c => c.CardID).ToList(),
-                    ownerId = d.UserId,
-                    ownerUserName = d.DeckOwner.UserName,
-                    studiedPercent = (double)d.StudyPercent,
-                    masteredPercent = (double)d.MasteredPercent,
-                    date_created = d.DateCreated,
-                    date_touched = d.DateTouched,
-                    date_updated = d.DateUpdated,
-                    orig_deck_id = d.OrigDeckId,
-                    orig_author_id = d.OrigAuthorId,
-                    orig_author_name = d.OrigAuthorId.IsNullOrEmpty() ? null : d.OrigAuthor.UserName,
-                    owner_profile_pic = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(d.DeckOwner.Email.Trim().ToLower())) + "?d=retro",
-                    orig_author_profile_pic = d.OrigAuthorId.IsNullOrEmpty() ? null : "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(d.OrigAuthor.Email.Trim().ToLower())) + "?d=retro"
-                });
+                return Forbid();
             }
+
+            // Build the deck info objects
+            DeckInfo deckInfo = new DeckInfo
+            {
+                id = deck.DeckID,
+                title = deck.Title,
+                description = deck.Description,
+                access = deck.Access.ToString(),
+                default_flang = deck.DefaultFrontLang.ToString(),
+                default_blang = deck.DefaultBackLang.ToString(),
+                cards = deck.Cards.Select(c => c.CardID).ToList(),
+                ownerId = deck.UserId,
+                ownerUserName = deck.DeckOwner.UserName,
+                studiedPercent = (double)deck.StudyPercent,
+                masteredPercent = (double)deck.MasteredPercent,
+                date_created = deck.DateCreated,
+                date_touched = deck.DateTouched,
+                date_updated = deck.DateUpdated,
+                orig_deck_id = deck.OrigDeckId,
+                orig_author_id = deck.OrigAuthorId,
+                orig_author_name = deck.OrigAuthorId.IsNullOrEmpty() ? null : deck.OrigAuthor.UserName,
+                owner_profile_pic = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(deck.DeckOwner.Email.Trim().ToLower())) + "?d=retro",
+                orig_author_profile_pic = deck.OrigAuthorId.IsNullOrEmpty() ? null : "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(deck.OrigAuthor.Email.Trim().ToLower())) + "?d=retro"
+            };
 
             return Ok(deckInfo);
         }
