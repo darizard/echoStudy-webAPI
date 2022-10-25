@@ -17,6 +17,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using echoStudy_webAPI.Data.Responses;
 using System.Security.Cryptography;
 using System.Text;
+using Castle.Core.Internal;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -89,7 +90,67 @@ namespace echoStudy_webAPI.Controllers
                     date_updated = d.DateUpdated,
                     orig_deck_id = d.OrigDeckId,
                     orig_author_id = d.OrigAuthorId,
-                    orig_author_name = d.OrigAuthorId is null || d.OrigAuthorId == "" ? null : d.OrigAuthor.UserName
+                    orig_author_name = d.OrigAuthorId.IsNullOrEmpty() ? null : d.OrigAuthor.UserName
+                });
+            }
+
+            return Ok(deckInfo);
+        }
+
+        // GET: /Public/Decks
+        /// <summary>
+        /// Retrieves all Public Decks
+        /// </summary>
+        /// <remarks>
+        /// A single Public deck whose ID is specified in the URL
+        /// </remarks>
+        /// <response code="200">Returns the specified Public Deck object</response>
+        /// <response code="404">Deck at the given ID was not found</response>
+        [HttpGet("decks/{id}")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<DeckInfo>>> GetPublicDeck(int id)
+        {
+            // Query the DB for the deck objects
+            var query = from d in _context.Decks.Include(d => d.Cards)
+                                                .Include(d => d.DeckOwner)
+                                                .Include(d => d.OrigAuthor)
+                        where d.Access == Access.Public 
+                           && d.DeckID == id
+                        select d;
+            var decks = await query.ToListAsync();
+
+            if(!decks.Any())
+            {
+                return NotFound(new {error = $"Deck id {id} not found"});
+            }
+
+            // Build the deck info objects
+            List<DeckInfo> deckInfo = new List<DeckInfo>();
+            foreach (Deck d in decks)
+            {
+                deckInfo.Add(new DeckInfo
+                {
+                    id = d.DeckID,
+                    title = d.Title,
+                    description = d.Description,
+                    access = d.Access.ToString(),
+                    default_flang = d.DefaultFrontLang.ToString(),
+                    default_blang = d.DefaultBackLang.ToString(),
+                    cards = d.Cards.Select(c => c.CardID).ToList(),
+                    ownerId = d.UserId,
+                    ownerUserName = d.DeckOwner.UserName,
+                    studiedPercent = (double)d.StudyPercent,
+                    masteredPercent = (double)d.MasteredPercent,
+                    date_created = d.DateCreated,
+                    date_touched = d.DateTouched,
+                    date_updated = d.DateUpdated,
+                    orig_deck_id = d.OrigDeckId,
+                    orig_author_id = d.OrigAuthorId,
+                    orig_author_name = d.OrigAuthorId.IsNullOrEmpty() ? null : d.OrigAuthor.UserName,
+                    owner_profile_pic = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(d.DeckOwner.Email.Trim().ToLower())) + "?d=retro",
+                    orig_author_profile_pic = d.OrigAuthorId.IsNullOrEmpty() ? null : "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(d.OrigAuthor.Email.Trim().ToLower())) + "?d=retro"
                 });
             }
 
