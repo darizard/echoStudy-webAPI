@@ -152,8 +152,8 @@ namespace echoStudy_webAPI.Controllers
                 orig_deck_id = deck.OrigDeckId,
                 orig_author_id = deck.OrigAuthorId,
                 orig_author_name = deck.OrigAuthorId.IsNullOrEmpty() ? null : deck.OrigAuthor.UserName,
-                owner_profile_pic = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(deck.DeckOwner.Email.Trim().ToLower())) + "?d=retro",
-                orig_author_profile_pic = deck.OrigAuthorId.IsNullOrEmpty() ? null : "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(deck.OrigAuthor.Email.Trim().ToLower())) + "?d=retro"
+                owner_profile_pic = GravatarConfig.GenerateGravatarURL(deck.DeckOwner),
+                orig_author_profile_pic = deck.OrigAuthorId.IsNullOrEmpty() ? null : GravatarConfig.GenerateGravatarURL(deck.OrigAuthor)
             };
 
             return Ok(deckInfo);
