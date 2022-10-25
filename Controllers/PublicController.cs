@@ -109,7 +109,8 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="404">Deck at the given ID was not found</response>
         [HttpGet("decks/{id}")]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(IQueryable<DeckInfo>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(DeckInfo), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<DeckInfo>> GetPublicDeck(int id)
         {
