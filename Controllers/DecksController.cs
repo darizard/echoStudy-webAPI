@@ -15,7 +15,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace echoStudy_webAPI.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("decks")]
     public class DecksController : EchoUserControllerBase
     {
         private readonly EchoStudyDB _context;
@@ -576,7 +576,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized for this action</response>
         /// <response code="404">Object at deckId was not found</response>
         /// <response code="500">Database failed to save despite valid request</response>
-        [HttpPost("Delete/{id}")]
+        [HttpPost("delete/{id}")]
         [Produces("text/plain")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
@@ -626,7 +626,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized for this action</response>
         /// <response code="404">Object at userId was not found</response>
         /// <response code="500">Database failed to save despite valid request</response>
-        [HttpPost("Delete")]
+        [HttpPost("delete")]
         [Produces("application/json")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]

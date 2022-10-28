@@ -15,7 +15,7 @@ using static echoStudy_webAPI.Controllers.CardsController;
 namespace echoStudy_webAPI.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("cards")]
     public class CardsController : EchoUserControllerBase
     {
         private readonly EchoStudyDB _context;
@@ -247,7 +247,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at the cardId provided was not found</response>
         /// <response code="500">Database failed to complete card update despite valid request</response>
-        [HttpPost("Update")]
+        [HttpPost("update")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(typeof(CardUpdateResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
@@ -581,7 +581,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at the cardId provided was not found</response>
         /// <response code="500">Database failed to complete card update despite valid request</response>
-        [HttpPost("Study")]
+        [HttpPost("study")]
         [Produces("application/json", "text/plain")]
         [ProducesResponseType(typeof(PostStudyResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
@@ -663,7 +663,7 @@ namespace echoStudy_webAPI.Controllers
         /// <response code="403">The current user is not authorized to access the specified card</response>
         /// <response code="404">Object at cardId was not found</response>
         /// <response code="500">Database failed to complete card deletion despite valid request</response>
-        [HttpPost("Delete")]
+        [HttpPost("delete")]
         [Produces("text/plain", "application/json")]
         [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]

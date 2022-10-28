@@ -20,7 +20,7 @@ using System.Text;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("[controller]")]
+    [Route("public")]
     [ApiController]
     [AllowAnonymous]
     public class PublicController : EchoUserControllerBase
