@@ -48,6 +48,8 @@ namespace echoStudy_webAPI.Controllers
             public int? orig_deck_id { get; set; }
             public string orig_author_id { get; set; }
             public string orig_author_name { get; set; }
+            public string owner_profile_pic { get; set; }
+            public string orig_author_profile_pic { get; set; }
         }
 
         /**

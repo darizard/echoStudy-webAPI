@@ -17,6 +17,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using echoStudy_webAPI.Data.Responses;
 using System.Security.Cryptography;
 using System.Text;
+using Castle.Core.Internal;
+using static echoStudy_webAPI.Controllers.CardsController;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -89,9 +91,70 @@ namespace echoStudy_webAPI.Controllers
                     date_updated = d.DateUpdated,
                     orig_deck_id = d.OrigDeckId,
                     orig_author_id = d.OrigAuthorId,
-                    orig_author_name = d.OrigAuthorId is null || d.OrigAuthorId == "" ? null : d.OrigAuthor.UserName
+                    orig_author_name = d.OrigAuthorId.IsNullOrEmpty() ? null : d.OrigAuthor.UserName
                 });
             }
+
+            return Ok(deckInfo);
+        }
+
+        // GET: /Public/Decks/{id}
+        /// <summary>
+        /// Retrieves all Public Decks
+        /// </summary>
+        /// <remarks>
+        /// A single Public deck whose ID is specified in the URL
+        /// </remarks>
+        /// <response code="200">Returns the specified Public Deck object</response>
+        /// <response code="404">Deck at the given ID was not found</response>
+        [HttpGet("decks/{id}")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(DeckInfo), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<DeckInfo>> GetPublicDeck(int id)
+        {
+            // Query the DB for the deck objects
+            var query = from d in _context.Decks.Include(d => d.Cards)
+                                                .Include(d => d.DeckOwner)
+                                                .Include(d => d.OrigAuthor)
+                        where d.DeckID == id
+                        select d;
+            var deck = await query.FirstOrDefaultAsync();
+
+            if(deck is null)
+            {
+                return NotFound(new {error = $"Deck id {id} not found"});
+            }
+
+            if(deck.Access != Access.Public)
+            {
+                return Forbid();
+            }
+
+            // Build the deck info objects
+            DeckInfo deckInfo = new DeckInfo
+            {
+                id = deck.DeckID,
+                title = deck.Title,
+                description = deck.Description,
+                access = deck.Access.ToString(),
+                default_flang = deck.DefaultFrontLang.ToString(),
+                default_blang = deck.DefaultBackLang.ToString(),
+                cards = deck.Cards.Select(c => c.CardID).ToList(),
+                ownerId = deck.UserId,
+                ownerUserName = deck.DeckOwner.UserName,
+                studiedPercent = (double)deck.StudyPercent,
+                masteredPercent = (double)deck.MasteredPercent,
+                date_created = deck.DateCreated,
+                date_touched = deck.DateTouched,
+                date_updated = deck.DateUpdated,
+                orig_deck_id = deck.OrigDeckId,
+                orig_author_id = deck.OrigAuthorId,
+                orig_author_name = deck.OrigAuthorId.IsNullOrEmpty() ? null : deck.OrigAuthor.UserName,
+                owner_profile_pic = GravatarConfig.GenerateGravatarURL(deck.DeckOwner),
+                orig_author_profile_pic = deck.OrigAuthorId.IsNullOrEmpty() ? null : GravatarConfig.GenerateGravatarURL(deck.OrigAuthor)
+            };
 
             return Ok(deckInfo);
         }
@@ -339,6 +402,90 @@ namespace echoStudy_webAPI.Controllers
 
             // Return their details
             return Ok(userInfo);
+        }
+
+        // GET: /Public/Cards?deckId={deckId}
+        /// <summary>
+        /// Retrieves all Card objects owned by the authenticated user or all Card
+        /// objects associated with a specific Deck owned by the authenticated user
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="deckId">The ID of the related deck</param>"
+        /// <response code="200">Returns the queried Card objects</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified deck</response>
+        /// <response code="404">Object not found with the provided userId, userEmail, or deckId</response>
+        [HttpGet("cards")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IQueryable<CardInfo>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<CardInfo>>> GetCardsFromPublicDeck(int? deckId)
+        {
+            List<CardInfo> cards;
+
+            if (deckId is not null)
+            {
+                var querydeck = from d in _context.Decks
+                                where d.DeckID == deckId
+                                select d;
+
+                List<Deck> decks = await querydeck.ToListAsync();
+
+                if (!decks.Any())
+                {
+                    return NotFound(new { error = $"Deck not found at id {deckId}" });
+                }
+
+                if(decks.First().Access != Access.Public)
+                {
+                    return Forbid();
+                }
+
+                var querycards = from c in _context.Cards
+                                 where c.DeckID == deckId 
+                                 select new CardInfo
+                                 {
+                                     id = c.CardID,
+                                     ftext = c.FrontText,
+                                     btext = c.BackText,
+                                     faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
+                                     baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
+                                     flang = c.FrontLang.ToString(),
+                                     blang = c.BackLang.ToString(),
+                                     deckId = c.DeckID,
+                                     score = c.Score,
+                                     ownerId = c.UserId,
+                                     date_created = c.DateCreated,
+                                     date_updated = c.DateUpdated,
+                                     date_touched = c.DateTouched
+                                 };
+
+                cards = await querycards.ToListAsync();
+                return Ok(cards);
+            }
+
+            var queryuser = from c in _context.Cards
+                            where c.UserId == _user.Id
+                            select new CardInfo
+                            {
+                                id = c.CardID,
+                                ftext = c.FrontText,
+                                btext = c.BackText,
+                                faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
+                                baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
+                                flang = c.FrontLang.ToString(),
+                                blang = c.BackLang.ToString(),
+                                deckId = c.DeckID,
+                                score = c.Score,
+                                ownerId = c.UserId,
+                                date_created = c.DateCreated,
+                                date_updated = c.DateUpdated,
+                                date_touched = c.DateTouched
+                            };
+            return Ok(await queryuser.ToListAsync());
         }
     }
 }
