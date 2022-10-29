@@ -403,8 +403,6 @@ namespace echoStudy_webAPI.Controllers
             deck.OrigDeckId = null;
             deck.OrigAuthorId = null;
 
-            // Save the deck
-            _context.Decks.Update(deck);
 
             // Try to save
             try
@@ -682,7 +680,6 @@ namespace echoStudy_webAPI.Controllers
         {
             var query = _context.Decks.Where(x => deckIds.Contains(x.DeckID));
             List<Deck> derivedDecksList = await query.ToListAsync();
-            _context.UpdateRange(derivedDecksList);
 
             foreach(Deck d in derivedDecksList)
             {
