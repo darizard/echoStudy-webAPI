@@ -161,7 +161,7 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<DeckCategory>> PostDeckCategory(List<PostDeckCategoryInfo> categoryInfos)
+        public async Task<IActionResult> PostDeckCategory(List<PostDeckCategoryInfo> categoryInfos)
         {
             List<int> createdCategories = new List<int>();
 
