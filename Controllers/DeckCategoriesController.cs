@@ -8,27 +8,29 @@ using Microsoft.EntityFrameworkCore;
 using echoStudy_webAPI.Models;
 using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Castle.Core.Internal;
+using static echoStudy_webAPI.Controllers.CardsController;
 
 namespace echoStudy_webAPI.Controllers
 {
-    [Route("[controller]")]
+    [Route("deckcategories")]
     [ApiController]
-    [ApiExplorerSettings(IgnoreApi = true)]
-    public class DeckCategoriesController : ControllerBase
+
+
+    public class DeckCategoriesController : EchoUserControllerBase
     {
         private readonly EchoStudyDB _context;
         private readonly UserManager<EchoUser> _userManager;
 
-        public DeckCategoriesController(EchoStudyDB context,
-            UserManager<EchoUser> userManager)
+        public DeckCategoriesController(EchoStudyDB context, UserManager<EchoUser> um) : base(um)
         {
             _context = context;
-            _userManager = userManager;
         }
 
         /**
- * This class should contain all information needed in a GET request
- */
+        * This class should contain all information needed in a GET request
+        */
         public class DeckCategoryInfo
         {
             public int id { get; set; }
@@ -48,533 +50,321 @@ namespace echoStudy_webAPI.Controllers
         {
             public string title { get; set; }
             public string description { get; set; }
-            public string userEmail { get; set; }
             public List<int> deckIds { get; set; }
+            public int? categoryId { get; set; }
         }
 
-        // GET: api/DeckCategories
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetDeckCategories()
+        /**
+        * Define response type for category update
+        */
+        public class DeckCategoryUpdateResponse
         {
-            var query = from dc in _context.DeckCategories
-                        select new DeckCategoryInfo
-                        {
-                            id = dc.CategoryID,
-                            title = dc.Title,
-                            description = dc.Description,
-                            decks = dc.Decks.Select(d => d.DeckID).ToList(),
-                            ownerId = dc.UserId,
-                            date_created = dc.DateCreated,
-                            date_updated = dc.DateUpdated,
-                            date_touched = dc.DateTouched
-                        };
-            return await query.ToListAsync();
+            public List<int> ids { get; set; }
+            public DateTime dateUpdated { get; set; }
         }
 
-        // GET: api/DeckCategories/5
+        /**
+        * Define response type for category creation
+        */
+        public class DeckCategoryCreationResponse
+        {
+            public List<int> ids { get; set; }
+            public DateTime dateCreated { get; set; }
+        }
+
+        // GET: /deckcategories
+        /// <summary>
+        /// Retrieves all Deck Categories owned by the authenticated user or a specific deck category by id
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="id">The ID of the related deck category</param>"
+        /// <response code="200">Returns the queried Deck Category objects</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified category</response>
+        /// <response code="404">Object not found with the provided id</response>
         [HttpGet("{id}")]
-        public async Task<ActionResult<DeckCategoryInfo>> GetDeckCategory(int id)
+        public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetDeckCategory(int? id)
         {
-            var query = from dc in _context.DeckCategories
-                        where dc.CategoryID == id
-                        select new DeckCategoryInfo
-                        {
-                            id = dc.CategoryID,
-                            title = dc.Title,
-                            description = dc.Description,
-                            decks = dc.Decks.Select(d => d.DeckID).ToList(),
-                            ownerId = dc.UserId,
-                            date_created = dc.DateCreated,
-                            date_updated = dc.DateUpdated,
-                            date_touched = dc.DateTouched
-                        };
+            List<DeckCategoryInfo> categories = new List<DeckCategoryInfo>();
 
-            if (query.Count() == 0)
+            // Grab one specific category if the id is provided
+            if(id is not null)
             {
-                return NotFound();
-            }
-
-            return query.First();
-        }
-
-        /**
-        * Gets all deck categories belonging to the given user provided by email
-        */
-        // GET: api/DeckCategories/UserEmail=johndoe@gmail.com
-        [HttpGet("/DeckCategories/UserEmail={userEmail}")]
-        public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetUserDeckCategoriesByEmail(string userEmail)
-        {
-            EchoUser user = await _userManager.FindByEmailAsync(userEmail);
-            if (user is null)
-            {
-                return BadRequest("User " + userEmail + " not found");
-            }
-            else
-            {
-                var query = from dc in _context.DeckCategories
-                            where dc.UserId == user.Id
-                            select new DeckCategoryInfo
-                            {
-                                id = dc.CategoryID,
-                                title = dc.Title,
-                                description = dc.Description,
-                                decks = dc.Decks.Select(d => d.DeckID).ToList(),
-                                ownerId = dc.UserId,
-                                date_created = dc.DateCreated,
-                                date_updated = dc.DateUpdated,
-                                date_touched = dc.DateTouched
-                            };
-                return await query.ToListAsync();
-            }
-        }
-
-
-        /**
-         * Gets all deck categories belonging to the given user
-         */
-        // GET: api/DeckCategories/User=25c35795-ce2c-414a-ba58-152d475ba818
-        [HttpGet("/DeckCategories/User={userId}")]
-        public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetUserDeckCategories(string userId)
-        {
-            var query = from dc in _context.DeckCategories
-                        where dc.UserId == userId
-                        select new DeckCategoryInfo
-                        {
-                            id = dc.CategoryID,
-                            title = dc.Title,
-                            description = dc.Description,
-                            decks = dc.Decks.Select(d => d.DeckID).ToList(),
-                            ownerId = dc.UserId,
-                            date_created = dc.DateCreated,
-                            date_updated = dc.DateUpdated,
-                            date_touched = dc.DateTouched
-                        };
-            return await query.ToListAsync();
-        }
-
-        /**
-        * Gets the deck categories that owns a given deck id belonging to a given deck category
-        */
-        // GET: api/DeckCategories/GetDecks/categoryId=2
-        [HttpGet("/DeckCategories/Deck={deckId}")]
-        public async Task<ActionResult<IEnumerable<DeckCategoryInfo>>> GetOwnerDeckCategory(int deckId)
-        {
-            // Grab the deck. Only possible for one or zero results since ids are unique.
-            var deckQuery = from d in _context.Decks
-                            where d.DeckID == deckId
-                            select d;
-            if (deckQuery.Count() == 0)
-            {
-                return BadRequest("Deck id " + deckId + " does not exist");
-            }
-            else
-            {
-                Deck deck = deckQuery.First();
-                var query = from dc in _context.DeckCategories
-                            where dc.Decks.Contains(deck)
-                            select new DeckCategoryInfo
-                            {
-                                id = dc.CategoryID,
-                                title = dc.Title,
-                                description = dc.Description,
-                                decks = dc.Decks.Select(d => d.DeckID).ToList(),
-                                ownerId = dc.UserId,
-                                date_created = dc.DateCreated,
-                                date_updated = dc.DateUpdated,
-                                date_touched = dc.DateTouched
-                            };
-                return await query.ToListAsync();
-            }
-        }
-
-        // PUT: api/DeckCategories/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutDeckCategory(int id, PostDeckCategoryInfo deckCategoryInfo)
-        {
-            var deckCategoryQuery = from dc in _context.DeckCategories
-                            where dc.CategoryID == id
-                            select dc;
-            // Create deck category
-            if(deckCategoryQuery.Count() == 0)
-            {
-                // Create and populate a deck category with the given info
-                DeckCategory deckCategory = new DeckCategory();
-                deckCategory.Title = deckCategoryInfo.title;
-                deckCategory.Description = deckCategoryInfo.description;
-
-                // Associate the deck category with the appropriate decks
-                deckCategory.Decks = new List<Deck>();
-                foreach (int deckId in deckCategoryInfo.deckIds)
+                var querycategory = from dc in _context.DeckCategories.Include(d => d.Decks)
+                                    where dc.CategoryID == id
+                                    select dc;
+                // Ensure it exists
+                if (querycategory.IsNullOrEmpty())
                 {
-                    // Grab the deck category. Only possible for one or zero results since ids are unique.
-                    var query = from d in _context.Decks.Include(d => d.DeckCategories)
-                                where d.DeckID == deckId
-                                select d;
-                    if (query.Count() == 0)
-                    {
-                        return BadRequest("Deck id " + deckId + " does not exist");
-                    }
-                    else
-                    {
-                        Deck deck = query.First();
-                        deck.DeckCategories.Add(deckCategory);
-                        deckCategory.Decks.Add(deck);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
+                    return NotFound();
                 }
-
-                // Owner
-                EchoUser user = await _userManager.FindByEmailAsync(deckCategoryInfo.userEmail);
-                if (user is null)
+                DeckCategory category = await querycategory.FirstAsync();
+                // Ensure they own it
+                if (category.UserId != _user.Id)
                 {
-                    return BadRequest("User " + deckCategoryInfo.userEmail + " not found");
+                    return Forbid();
                 }
-                else
+                // It's good to grab
+                categories.Add(new DeckCategoryInfo
                 {
-                    deckCategory.UserId = user.Id;
-                }
-
-                // Dates
-                deckCategory.DateCreated = DateTime.Now;
-                deckCategory.DateTouched = DateTime.Now;
-                deckCategory.DateUpdated = DateTime.Now;
-
-                // Save the deck category
-                _context.DeckCategories.Add(deckCategory);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction("PutDeckCategory", new
-                {
-                    id = deckCategory.CategoryID,
-                    dateCreated = deckCategory.DateCreated
+                    id = category.CategoryID,
+                    title = category.Title,
+                    description = category.Description,
+                    decks = category.Decks.Select(d => d.DeckID).ToList(),
+                    ownerId = category.UserId,
+                    date_created = category.DateCreated,
+                    date_updated = category.DateUpdated
                 });
             }
-            // Create the deck category
+            // Grab everything the user owns otherwise
             else
             {
-                DeckCategory deckCategory = deckCategoryQuery.First();
-
-                // Owner
-                EchoUser user = await _userManager.FindByEmailAsync(deckCategoryInfo.userEmail);
-                if (user is null)
-                {
-                    return BadRequest("User " + deckCategoryInfo.userEmail + " not found");
-                }
-                else
-                {
-                    deckCategory.UserId = user.Id;
-                }
-
-                // Set description, title
-                deckCategory.Title = deckCategoryInfo.title;
-                deckCategory.Description = deckCategoryInfo.description;
-
-                // Assign it to the cards given by id (if there is any)
-                HashSet<Deck> updatedDecks = new HashSet<Deck>();
-                foreach (int deckId in deckCategoryInfo.deckIds)
-                {
-                    // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from d in _context.Decks.Include(d => d.DeckCategories)
-                                where d.DeckID == deckId
-                                select d;
-                    if (query.Count() == 0)
-                    {
-                        return BadRequest("Deck id " + deckId + " does not exist");
-                    }
-                    else
-                    {
-                        Deck deck = query.First();
-                        // If they aren't already related, relate them
-                        if (!deck.DeckCategories.Contains(deckCategory))
-                        {
-                            deckCategory.Decks.Add(deck);
-                            deck.DeckCategories.Add(deckCategory);
-                        }
-                        updatedDecks.Add(deck);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
-                List<Deck> currentDecks = deckCategory.Decks.ToList();
-                // Unrelate any decks if needed
-                foreach (Deck deck in currentDecks)
-                {
-                    if (!updatedDecks.Contains(deck))
-                    {
-                        deck.DeckCategories.Remove(deckCategory);
-                        deckCategory.Decks.Remove(deck);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
-
-                // Change update date
-                deckCategory.DateUpdated = DateTime.Now;
-
-                // Mark the deck category as modified
-                _context.Entry(deckCategory).State = EntityState.Modified;
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    return BadRequest("Failed to update deck category");
-                }
-
-                return Ok();
+                var querycategory = from dc in _context.DeckCategories.Include(d => d.Decks)
+                                    where dc.UserId == _user.Id
+                                    select new DeckCategoryInfo 
+                                    {
+                                        id = dc.CategoryID,
+                                        title = dc.Title,
+                                        description = dc.Description,
+                                        decks = dc.Decks.Select(d => d.DeckID).ToList(),
+                                        ownerId = dc.UserId,
+                                        date_created = dc.DateCreated,
+                                        date_updated = dc.DateUpdated
+                                    };
+                categories = await querycategory.ToListAsync();
             }
+
+            return Ok(categories);
         }
 
-        // POST: api/DeckCategories
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // POST: /deckcategories
+        /// <summary>
+        /// Creates deck categories for the currently authenticated user through the provided list
+        /// </summary>
+        /// <param name="categoryInfos">
+        /// List of cards to create.
+        /// Required: title, description, deckIds
+        /// </param>
+        /// <remarks></remarks>
+        /// <response code="201">Returns the ids and creation date of the resulting deck categories</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to add a deck category to the specified deck</response>
+        /// <response code="404">Deck category at deckId provided was not found</response>
+        /// <response code="500">Database failed to complete deck category creation despite valid request</response>
         [HttpPost]
-        public async Task<ActionResult<DeckCategory>> PostDeckCategory(PostDeckCategoryInfo deckCategoryInfo)
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CardCreationResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<DeckCategory>> PostDeckCategory(List<PostDeckCategoryInfo> categoryInfos)
         {
-            // Create and populate a deck category with the given info
-            DeckCategory deckCategory = new DeckCategory();
-            deckCategory.Title = deckCategoryInfo.title;
-            deckCategory.Description = deckCategoryInfo.description;
+            List<int> createdCategories = new List<int>();
 
-            // Associate the deck category with the appropriate decks
-            deckCategory.Decks = new List<Deck>();
-            foreach (int deckId in deckCategoryInfo.deckIds)
+            foreach (PostDeckCategoryInfo categoryInfo in categoryInfos)
             {
-                // Grab the deck category. Only possible for one or zero results since ids are unique.
-                var query = from d in _context.Decks.Include(d => d.DeckCategories)
-                            where d.DeckID == deckId
-                            select d;
-                if (query.Count() == 0)
+                // Required fields
+                if (categoryInfo.title is null)
                 {
-                    return BadRequest("Deck id " + deckId + " does not exist");
+                    return BadRequest("title is required at index " + createdCategories.Count);
                 }
-                else
+                if (categoryInfo.description is null)
                 {
-                    Deck deck = query.First();
-                    deck.DeckCategories.Add(deckCategory);
-                    deckCategory.Decks.Add(deck);
-                    _context.Entry(deck).State = EntityState.Modified;
+                    return BadRequest("description is required at index " + createdCategories.Count);
                 }
+                if (categoryInfo.deckIds is null)
+                {
+                    return BadRequest("deckIds is required at index " + createdCategories.Count);
+                }
+
+                // Everything required is present so create the category
+                DeckCategory category = new DeckCategory
+                {
+                    Title = categoryInfo.title,
+                    Description = categoryInfo.description,
+                    UserId = _user.Id,
+                    DateCreated = DateTime.Now,
+                    DateUpdated = DateTime.Now,
+                    DateTouched = DateTime.Now
+                };
+
+                // Grab the related decks
+                var querydeck = from d in _context.Decks
+                                where categoryInfo.deckIds.Contains(d.DeckID)
+                                select d;
+                category.Decks = await querydeck.ToListAsync();
+
+                // Ready to add
+                _context.DeckCategories.Add(category);
+                createdCategories.Add(category.CategoryID);
             }
 
-            // Owner
-            EchoUser user = await _userManager.FindByEmailAsync(deckCategoryInfo.userEmail);
-            if (user is null)
+            // Try to save
+            try
             {
-                return BadRequest("User " + deckCategoryInfo.userEmail + " not found");
+                await _context.SaveChangesAsync();
             }
-            else
+            catch (DbUpdateConcurrencyException e)
             {
-                deckCategory.UserId = user.Id;
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
             }
 
-            // Dates
-            deckCategory.DateCreated = DateTime.Now;
-            deckCategory.DateTouched = DateTime.Now;
-            deckCategory.DateUpdated = DateTime.Now;
-
-            // Save the deck category
-            _context.DeckCategories.Add(deckCategory);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("PostDeckCategory", new
+            return CreatedAtAction("PostDeckCategory", new DeckCategoryCreationResponse
             {
-                id = deckCategory.CategoryID,
-                dateCreated = deckCategory.DateCreated
+                ids = createdCategories,
+                dateCreated = DateTime.Now
             });
         }
 
-        // DELETE: api/DeckCategories/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDeckCategory(int id)
+        // Post: /deckcategories/update
+        /// <summary>
+        /// Updates deck categories provided through a list
+        /// </summary>
+        /// <remarks></remarks>
+        /// <param name="categoryInfos">
+        /// List of categories to be updated and their data
+        /// Optional: title, description, deckIds
+        /// </param>
+        /// <response code="200">Returns the Ids of each category and DateUpdated</response>
+        /// <response code="400">Invalid input or input type</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified deck category</response>
+        /// <response code="404">Object at the categoryId provided was not found</response>
+        /// <response code="500">Database failed to complete category update despite valid request</response>
+        [HttpPost("update")]
+        [Produces("application/json", "text/plain")]
+        [ProducesResponseType(typeof(CardUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BadRequestResult), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> PostCategoryEdit(List<PostDeckCategoryInfo> categoryInfos)
         {
-            var deckCategory = await _context.DeckCategories.FindAsync(id);
-            if (deckCategory == null)
+            List<int> ids = new List<int>();
+
+            foreach (PostDeckCategoryInfo categoryInfo in categoryInfos)
             {
-                return NotFound();
+                // Ensure ID was provided
+                if (categoryInfo.categoryId is null)
+                {
+                    return BadRequest("Category ID is required for editing");
+                }
+                ids.Add((int)categoryInfo.categoryId);
+
+                // Ensure the category exists and that the owner made the request
+                DeckCategory category = await _context.DeckCategories.FindAsync(categoryInfo.categoryId);
+                if (category is null)
+                {
+                    return NotFound("Category id " + categoryInfo.categoryId + " not found");
+                }
+                if (category.UserId != _user.Id)
+                {
+                    return Forbid();
+                }
+
+                //-------Update according to incoming info
+                if(categoryInfo.title is not null)
+                {
+                    category.Title = categoryInfo.title;
+                }
+                if (categoryInfo.description is not null)
+                {
+                    category.Description = categoryInfo.description;
+                }
+                if (categoryInfo.deckIds is not null)
+                {
+                    var querydeck = from d in _context.Decks
+                                    where categoryInfo.deckIds.Contains(d.DeckID)
+                                    select d;
+
+                    category.Decks = await querydeck.ToListAsync();
+                }
+
+                // Modify the updated date
+                category.DateUpdated = DateTime.Now;
+
+                // Indicate to the DB this category has changed
+                _context.DeckCategories.Update(category);
             }
 
-            _context.DeckCategories.Remove(deckCategory);
-            await _context.SaveChangesAsync();
+            // Try to save
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+            return Ok(new DeckCategoryUpdateResponse
+            {
+                ids = ids,
+                dateUpdated = DateTime.Now
+            });
+        }
+
+        // DELETE: /deckcategories/delete
+        /// <summary>
+        /// Deletes the deck categories related to the provided IDs
+        /// </summary>
+        /// <param name="ids">List of IDs of categories to be deleted</param>
+        /// <response code="204">Provided deck categories were successfully deleted</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified card</response>
+        /// <response code="404">Object at cardId was not found</response>
+        /// <response code="500">Database failed to complete card deletion despite valid request</response>
+        [HttpPost("delete")]
+        [Produces("text/plain", "application/json")]
+        [ProducesResponseType(typeof(NoContentResult), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> PostCategoryDelete(List<int> ids)
+        {
+            // Delete the category
+            foreach (int id in ids)
+            {
+                DeckCategory category = await _context.DeckCategories.FindAsync(id);
+                if (category == null)
+                {
+                    return NotFound();
+                }
+                if (category.UserId != _user.Id)
+                {
+                    return Forbid();
+                }
+                _context.DeckCategories.Remove(category);
+            }
+
+            // Try to save
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
+            }
 
             return NoContent();
-        }
-
-        /*
-* Updates the given card by id 
-*/
-        // PATCH: api/Decks/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPatch("{id}")]
-        public async Task<IActionResult> PatchDeck(int id, PostDeckCategoryInfo deckCategoryInfo)
-        {
-            var deckCategoryQuery = from dc in _context.DeckCategories.Include(d => d.Decks)
-                            where dc.CategoryID == id
-                            select dc;
-            // Create the card
-            if (deckCategoryQuery.Count() == 0)
-            {
-                return BadRequest("Deck " + id + " does not exist");
-            }
-            // Update the card
-            else
-            {
-                DeckCategory deckCategory = deckCategoryQuery.First();
-
-                // Owner
-                EchoUser user = await _userManager.FindByEmailAsync(deckCategoryInfo.userEmail);
-                if (user is null)
-                {
-                    return BadRequest("User " + deckCategoryInfo.userEmail + " not found");
-                }
-                else
-                {
-                    deckCategory.UserId = user.Id;
-                }
-
-                // Set description, title
-                deckCategory.Title = deckCategoryInfo.title;
-                deckCategory.Description = deckCategoryInfo.description;
-
-                // Assign it to the cards given by id (if there is any)
-                HashSet<Deck> updatedDecks = new HashSet<Deck>();
-                foreach (int deckId in deckCategoryInfo.deckIds)
-                {
-                    // Grab the deck. Only possible for one or zero results since ids are unique.
-                    var query = from d in _context.Decks.Include(d => d.DeckCategories)
-                                where d.DeckID == deckId
-                                select d;
-                    if (query.Count() == 0)
-                    {
-                        return BadRequest("Deck id " + deckId + " does not exist");
-                    }
-                    else
-                    {
-                        Deck deck = query.First();
-                        // If they aren't already related, relate them
-                        if (!deck.DeckCategories.Contains(deckCategory))
-                        {
-                            deckCategory.Decks.Add(deck);
-                            deck.DeckCategories.Add(deckCategory);
-                        }
-                        updatedDecks.Add(deck);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
-                List<Deck> currentDecks = deckCategory.Decks.ToList();
-                // Unrelate any decks if needed
-                foreach (Deck deck in currentDecks)
-                {
-                    if (!updatedDecks.Contains(deck))
-                    {
-                        deck.DeckCategories.Remove(deckCategory);
-                        deckCategory.Decks.Remove(deck);
-                        _context.Entry(deck).State = EntityState.Modified;
-                    }
-                }
-
-                // Change update date
-                deckCategory.DateUpdated = DateTime.Now;
-
-                // Mark the deck category as modified
-                _context.Entry(deckCategory).State = EntityState.Modified;
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    return BadRequest("Failed to update deck category");
-                }
-
-                return Ok();
-            }
-        }
-
-
-        /*
-        * Updates the given deck by id 
-        */
-        // PATCH: api/DeckCategories/Touch=1
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPatch("Touch={id}")]
-        public async Task<IActionResult> TouchDeckCategory(int id)
-        {
-            var deckCategoryQuery = from dc in _context.DeckCategories
-                            where dc.CategoryID == id
-                            select dc;
-            // Deck doesn't exist
-            if (deckCategoryQuery.Count() == 0)
-            {
-                return BadRequest("Deck category " + id + " does not exist");
-            }
-            // Update the deck
-            else
-            {
-                DeckCategory deckCategory = deckCategoryQuery.First();
-
-                // Update touched date
-                deckCategory.DateTouched = DateTime.Now;
-
-                // Mark the card as modified
-                _context.Entry(deckCategory).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                return Ok();
-            }
-        }
-
-        /**
-        * Deletes all deck categories associated with one user
-        */
-        // DELETE: /api/DeckCategories/DeleteUserDeckCategories=25c35795-ce2c-414a-ba58-152d475ba818
-        [HttpDelete("/DeckCategories/DeleteUserDeckCategories={userId}")]
-        public async Task<IActionResult> DeleteUserDecks(string userId)
-        {
-            var query = from dc in _context.DeckCategories
-                        where dc.UserId == userId
-                        select dc;
-
-            List<DeckCategory> userDeckCategories = await query.ToListAsync();
-            foreach (DeckCategory deckCategory in userDeckCategories)
-            {
-                _context.DeckCategories.Remove(deckCategory);
-            }
-
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        /**
-         * Deletes all decks associated with one user
-         */
-        // DELETE: api/DeckCategories/DeleteUserDeckCategoriesByEmail=johnDoe@gmail.com
-        [HttpDelete("/DeckCategories/DeleteUserDeckCategoriesByEmail={userEmail}")]
-        public async Task<IActionResult> DeleteUserDecksByEmail(string userEmail)
-        {
-            EchoUser user = await _userManager.FindByEmailAsync(userEmail);
-            if (user is null)
-            {
-                return BadRequest("User " + userEmail + " not found");
-            }
-            else
-            {
-                var query = from dc in _context.DeckCategories
-                            where dc.UserId == user.Id
-                            select dc;
-
-                List<DeckCategory> userDeckCategories = await query.ToListAsync();
-                foreach (DeckCategory deckCategory in userDeckCategories)
-                {
-                    _context.DeckCategories.Remove(deckCategory);
-                }
-
-                await _context.SaveChangesAsync();
-
-                return NoContent();
-            }
         }
 
         private bool DeckCategoryExists(int id)
