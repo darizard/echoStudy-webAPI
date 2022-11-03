@@ -11,6 +11,7 @@ using echoStudy_webAPI.Areas.Identity.Data;
 using Microsoft.AspNetCore.Identity;
 using ThirdParty.Ionic.Zlib;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Net.Http;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -448,6 +449,8 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> PostDeckCreate(List<PostDeckInfo> decks)
         {
+            HttpResponseMessage x = null;
+
             List<Deck> createdDecks = new List<Deck>();
             foreach (PostDeckInfo deckInfo in decks)
             {

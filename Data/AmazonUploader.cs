@@ -41,6 +41,22 @@ namespace echoStudy_webAPI.Data
         }
 
         /**
+        * Uploads the custom audio file provided by the given user.
+        */
+        public static void uploadAudioFile(byte[] fileBytes, string username, string text, Language language)
+        {
+            // Create a PutObjectRequest and initialize its parameters
+            PutObjectRequest objReq = new PutObjectRequest();
+            objReq.BucketName = Resources.bucketName;
+            objReq.InputStream = new MemoryStream(fileBytes);
+            objReq.Key = getFileName(text, username, language);
+            objReq.ContentType = "audio/mpeg";
+
+            // Send the request to upload the file
+            PutObjectResponse objResp = client.PutObjectAsync(objReq).Result;
+        }
+
+        /**
         * Gets a presigned URL for the audio file related to the text and language provided
         * Throws an error if the file doesn't exist
         */
@@ -58,15 +74,14 @@ namespace echoStudy_webAPI.Data
         }
 
         /**
-        * Gets a presigned URL for the audio file related to the text and language provided
-        * Throws an error if the file doesn't exist
+        * Gets a presigned URL for the custom audio file from the info provided
         */
-        public static string getPresignedUrl(string fileName)
+        public static string getPresignedUrl(string text, string username, Language language)
         {
             // Create a GetPresignedUrlRequest and intialize it
             GetPreSignedUrlRequest urlReq = new GetPreSignedUrlRequest();
             urlReq.BucketName = Resources.bucketName;
-            urlReq.Key = fileName;
+            urlReq.Key = getFileName(text, username, language);
             urlReq.Expires = DateTime.Now.AddMinutes(10);
             urlReq.Protocol = Protocol.HTTP;
 
@@ -135,6 +150,15 @@ namespace echoStudy_webAPI.Data
         public static string getFileName(string text, Language language)
         {
             string fileName = language.ToString() + " " + text;
+
+            // Ensure no illegal characters
+            fileName = ByteArrayToHexString(SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(fileName)));
+
+            return fileName + ".mp3";
+        }
+        public static string getFileName(string text, string username, Language language)
+        {
+            string fileName = username + " " + language.ToString() + " " + text;
 
             // Ensure no illegal characters
             fileName = ByteArrayToHexString(SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(fileName)));

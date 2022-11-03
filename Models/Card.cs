@@ -7,6 +7,7 @@ using echoStudy_webAPI.Areas.Identity.Data;
 
 namespace echoStudy_webAPI.Models
 {
+
     public class Card
     {
         [Key]
@@ -28,7 +29,13 @@ namespace echoStudy_webAPI.Models
         [Required]
         [StringLength(4000)]
         public string BackAudio { get; set; }
+#nullable enable
+        [StringLength(4000)]
+        public string? CustomFrontAudio { get; set; }
 
+        [StringLength(4000)]
+        public string? CustomBackAudio { get; set; }
+#nullable disable
         [Required]
         [StringLength(50)]
         public Language FrontLang { get; set; }

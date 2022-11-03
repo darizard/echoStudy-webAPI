@@ -36,6 +36,8 @@ namespace echoStudy_webAPI.Controllers
             public string btext { get; set; }
             public string faud { get; set; }
             public string baud { get; set; }
+            public string faudCustom { get; set; }
+            public string baudCustom { get; set; }
             public string flang { get; set; }
             public string blang { get; set; }
             public int deckId { get; set; }
@@ -57,6 +59,8 @@ namespace echoStudy_webAPI.Controllers
             public string backLang { get; set; }
             public int? cardId { get; set; }
             public int? deckId { get; set; }
+            public byte[] frontAudio { get; set; }
+            public byte[] backAudio { get; set; }
         }
 
         /**
@@ -144,6 +148,8 @@ namespace echoStudy_webAPI.Controllers
                                      btext = c.BackText,
                                      faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
                                      baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
+                                     faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl(c.FrontText, _user.UserName, c.FrontLang),
+                                     baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl(c.BackText, _user.UserName, c.BackLang),
                                      flang = c.FrontLang.ToString(),
                                      blang = c.BackLang.ToString(),
                                      deckId = c.DeckID,
@@ -167,6 +173,8 @@ namespace echoStudy_webAPI.Controllers
                                 btext = c.BackText,
                                 faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
                                 baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
+                                faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl(c.FrontText, _user.UserName, c.FrontLang),
+                                baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl(c.BackText, _user.UserName, c.BackLang),
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
                                 deckId = c.DeckID,
@@ -207,6 +215,8 @@ namespace echoStudy_webAPI.Controllers
                             btext = c.BackText,
                             faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
                             baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
+                            faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl(c.FrontText, _user.UserName, c.FrontLang),
+                            baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl(c.BackText, _user.UserName, c.BackLang),
                             flang = c.FrontLang.ToString(),
                             blang = c.BackLang.ToString(),
                             deckId = c.DeckID,
@@ -239,7 +249,7 @@ namespace echoStudy_webAPI.Controllers
         /// <remarks></remarks>
         /// <param name="cardInfos">
         /// List of cards to be updated and their data
-        /// Optional: frontText, backText, frontLang, backLang, deckId
+        /// Optional: frontText, backText, frontLang, backLang, deckId, frontAudio, backAudio
         /// </param>
         /// <response code="200">Returns the Id and DateUpdated of the edited Card</response>
         /// <response code="400">Invalid input or input type</response>
@@ -375,6 +385,16 @@ namespace echoStudy_webAPI.Controllers
                 if (cardInfo.backLang is not null || cardInfo.backText is not null)
                 {
                     card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
+                }
+
+                // Custom audio may have been provided
+                if(cardInfo.frontAudio is not null)
+                {
+                    AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                }
+                if(cardInfo.backAudio is not null)
+                {
+                    AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
                 }
 
                 // Update date(s) modified and share metadata
@@ -524,6 +544,16 @@ namespace echoStudy_webAPI.Controllers
                 // Make Polly calls
                 card.FrontAudio = AmazonPolly.createTextToSpeechAudio(card.FrontText, card.FrontLang);
                 card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
+
+                // Custom audio may have been provided
+                if (cardInfo.frontAudio is not null)
+                {
+                    AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                }
+                if (cardInfo.backAudio is not null)
+                {
+                    AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
+                }
 
                 // update related deck's DateUpdated
                 card.Deck = deck;
