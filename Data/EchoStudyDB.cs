@@ -18,6 +18,7 @@ namespace echoStudy_webAPI.Models
 
         public DbSet<Card> Cards { get; set; }
         public DbSet<Deck> Decks { get; set; }
+        public DbSet<StudyActivity> StudyActivity { get; set; }
         public DbSet<DeckCategory> DeckCategories{ get; set; }
         public DbSet<Session> Sessions{ get; set; }
 
@@ -27,6 +28,9 @@ namespace echoStudy_webAPI.Models
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<StudyActivity>()
+                .HasIndex(sa => new { sa.UserId, sa.DeckId, sa.DateStudied })
+                .IsUnique(true);
         }
     }
 }

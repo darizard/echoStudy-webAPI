@@ -619,7 +619,7 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(StatusCodeResult), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> PostCardStudy(List<PostStudyInfo> studyInfos)
         {
-            List<int> ids = new List<int>();
+            List<int> ids = new();
             foreach(PostStudyInfo studyInfo in studyInfos)
             {
                 // Ensure the card exists and that the owner made the request
@@ -657,6 +657,27 @@ namespace echoStudy_webAPI.Controllers
 
                 // Update the card and deck
                 ids.Add(card.CardID);
+
+                // ensure we haven't already recorded study activity for this deck for this user today
+                var query = from sa in _context.StudyActivity
+                            where sa.UserId == _user.Id
+                               && sa.DateStudied == DateTime.Now.Date
+                               && sa.DeckId == deck.DeckID
+                            select sa;
+
+                // if we haven't, then do it
+                if(!await query.AnyAsync())
+                {
+                    // Record study activity
+                    StudyActivity activity = new()
+                    {
+                        UserId = _user.Id,
+                        DeckId = deck.DeckID,
+                        DateStudied = DateTime.Now.Date
+                    };
+
+                    await _context.AddAsync(activity);
+                }
             }
 
             try
