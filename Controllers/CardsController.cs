@@ -387,26 +387,30 @@ namespace echoStudy_webAPI.Controllers
                     card.BackAudio = AmazonPolly.createTextToSpeechAudio(card.BackText, card.BackLang);
                 }
 
-                // Custom audio may have been provided
+                // Custom audio may have been provided or it may want to be deleted
                 if(cardInfo.frontAudio is not null)
                 {
-                    card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                    if(cardInfo.frontAudio.Count() == 0)
+                    {
+                        card.CustomFrontAudio = null;
+                        AmazonUploader.deleteAudioFile(cardInfo.frontText, _user.UserName, card.FrontLang);
+                    }
+                    else
+                    {
+                        card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                    }
                 }
                 if(cardInfo.backAudio is not null)
                 {
-                    card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
-                }
-
-                // Custom audio may want to be removed
-                if(cardInfo.frontAudio is not null && cardInfo.frontAudio.Count() == 0)
-                {
-                    card.CustomFrontAudio = null;
-                    AmazonUploader.deleteAudioFile(cardInfo.frontText, _user.UserName, card.FrontLang);
-                }
-                if (cardInfo.backAudio is not null && cardInfo.backAudio.Count() == 0)
-                {
-                    card.CustomBackAudio = null;
-                    AmazonUploader.deleteAudioFile(cardInfo.backText, _user.UserName, card.BackLang);
+                    if(cardInfo.backAudio.Count() == 0)
+                    {
+                        card.CustomBackAudio = null;
+                        AmazonUploader.deleteAudioFile(cardInfo.backText, _user.UserName, card.BackLang);
+                    }
+                    else
+                    {
+                        card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
+                    }
                 }
 
                 // Update date(s) modified and share metadata
