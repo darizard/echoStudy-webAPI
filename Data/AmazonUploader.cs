@@ -43,7 +43,7 @@ namespace echoStudy_webAPI.Data
         /**
         * Uploads the custom audio file provided by the given user.
         */
-        public static void uploadAudioFile(byte[] fileBytes, string username, string text, Language language)
+        public static string uploadAudioFile(byte[] fileBytes, string username, string text, Language language)
         {
             // Create a PutObjectRequest and initialize its parameters
             PutObjectRequest objReq = new PutObjectRequest();
@@ -54,6 +54,35 @@ namespace echoStudy_webAPI.Data
 
             // Send the request to upload the file
             PutObjectResponse objResp = client.PutObjectAsync(objReq).Result;
+            return objReq.Key;
+        }
+
+        /**
+         * Deletes an audio file from S3 given text and language
+         */
+        public static void deleteAudioFile(string text, Language language)
+        {
+            // Request to delete file
+            DeleteObjectRequest objReq = new DeleteObjectRequest();
+            objReq.BucketName = Resources.bucketName;
+            objReq.Key = getFileName(text, language);
+
+            // Send the request to delete the file
+            DeleteObjectResponse objResp = client.DeleteObjectAsync(objReq).Result;
+        }
+
+        /**
+        * Deletes a custom audio file from S3 given username, text, and language
+        */
+        public static void deleteAudioFile(string username, string text, Language language)
+        {
+            // Request to delete file
+            DeleteObjectRequest objReq = new DeleteObjectRequest();
+            objReq.BucketName = Resources.bucketName;
+            objReq.Key = getFileName(text, username, language);
+
+            // Send the request to delete the file
+            DeleteObjectResponse objResp = client.DeleteObjectAsync(objReq).Result;
         }
 
         /**

@@ -390,11 +390,23 @@ namespace echoStudy_webAPI.Controllers
                 // Custom audio may have been provided
                 if(cardInfo.frontAudio is not null)
                 {
-                    AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                    card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
                 }
                 if(cardInfo.backAudio is not null)
                 {
-                    AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
+                    card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
+                }
+
+                // Custom audio may want to be removed
+                if(cardInfo.frontAudio is not null && cardInfo.frontAudio.Count() == 0)
+                {
+                    card.CustomFrontAudio = null;
+                    AmazonUploader.deleteAudioFile(cardInfo.frontText, _user.UserName, card.FrontLang);
+                }
+                if (cardInfo.backAudio is not null && cardInfo.backAudio.Count() == 0)
+                {
+                    card.CustomBackAudio = null;
+                    AmazonUploader.deleteAudioFile(cardInfo.backText, _user.UserName, card.BackLang);
                 }
 
                 // Update date(s) modified and share metadata
@@ -548,11 +560,11 @@ namespace echoStudy_webAPI.Controllers
                 // Custom audio may have been provided
                 if (cardInfo.frontAudio is not null)
                 {
-                    AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                    card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
                 }
                 if (cardInfo.backAudio is not null)
                 {
-                    AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
+                    card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
                 }
 
                 // update related deck's DateUpdated
