@@ -187,7 +187,7 @@ namespace echoStudy_webAPI.Data
         }
         public static string getFileName(string text, string username, Language language)
         {
-            string fileName = username + " " + language.ToString() + " " + text;
+            string fileName = username + "\\" + language.ToString() + " " + text;
 
             // Ensure no illegal characters
             fileName = ByteArrayToHexString(SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(fileName)));
