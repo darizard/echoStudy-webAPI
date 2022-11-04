@@ -37,7 +37,7 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [HttpGet]
-        public async Task<IActionResult> GetActivity(ActivityRetrievalRequest request)
+        public async Task<IActionResult> GetActivity([FromQuery] ActivityRetrievalRequest request)
         {
             DateTime? start = request.StartDate is null ? DateTime.MinValue : request.StartDate;
             DateTime? end = request.EndDate is null ? DateTime.MaxValue : request.EndDate;
