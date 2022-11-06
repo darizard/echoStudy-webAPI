@@ -148,8 +148,8 @@ namespace echoStudy_webAPI.Controllers
                                      btext = c.BackText,
                                      faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
                                      baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
-                                     faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl(c.FrontText, _user.UserName, c.FrontLang),
-                                     baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl(c.BackText, _user.UserName, c.BackLang),
+                                     faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl("f$"+c.CardID),
+                                     baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl("b$"+c.CardID),
                                      flang = c.FrontLang.ToString(),
                                      blang = c.BackLang.ToString(),
                                      deckId = c.DeckID,
@@ -173,8 +173,8 @@ namespace echoStudy_webAPI.Controllers
                                 btext = c.BackText,
                                 faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
                                 baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
-                                faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl(c.FrontText, _user.UserName, c.FrontLang),
-                                baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl(c.BackText, _user.UserName, c.BackLang),
+                                faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl("f$" + c.CardID),
+                                baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl("b$" + c.CardID),
                                 flang = c.FrontLang.ToString(),
                                 blang = c.BackLang.ToString(),
                                 deckId = c.DeckID,
@@ -215,8 +215,8 @@ namespace echoStudy_webAPI.Controllers
                             btext = c.BackText,
                             faud = AmazonUploader.getPresignedUrl(c.FrontText, c.FrontLang),
                             baud = AmazonUploader.getPresignedUrl(c.BackText, c.BackLang),
-                            faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl(c.FrontText, _user.UserName, c.FrontLang),
-                            baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl(c.BackText, _user.UserName, c.BackLang),
+                            faudCustom = String.IsNullOrEmpty(c.CustomFrontAudio) ? null : AmazonUploader.getPresignedUrl("f$" + c.CardID),
+                            baudCustom = String.IsNullOrEmpty(c.CustomBackAudio) ? null : AmazonUploader.getPresignedUrl("b$" + c.CardID),
                             flang = c.FrontLang.ToString(),
                             blang = c.BackLang.ToString(),
                             deckId = c.DeckID,
@@ -393,11 +393,11 @@ namespace echoStudy_webAPI.Controllers
                     if(cardInfo.frontAudio.Count() == 0)
                     {
                         card.CustomFrontAudio = null;
-                        AmazonUploader.deleteAudioFile(cardInfo.frontText, _user.UserName, card.FrontLang);
+                        AmazonUploader.deleteAudioFile("f$"+card.CardID);
                     }
                     else
                     {
-                        card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                        card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, "f$" + card.CardID);
                     }
                 }
                 if(cardInfo.backAudio is not null)
@@ -405,11 +405,11 @@ namespace echoStudy_webAPI.Controllers
                     if(cardInfo.backAudio.Count() == 0)
                     {
                         card.CustomBackAudio = null;
-                        AmazonUploader.deleteAudioFile(cardInfo.backText, _user.UserName, card.BackLang);
+                        AmazonUploader.deleteAudioFile("b$" + card.CardID);
                     }
                     else
                     {
-                        card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
+                        card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, "b$" + card.CardID);
                     }
                 }
 
@@ -564,11 +564,11 @@ namespace echoStudy_webAPI.Controllers
                 // Custom audio may have been provided
                 if (cardInfo.frontAudio is not null)
                 {
-                    card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, _user.UserName, cardInfo.frontText, card.FrontLang);
+                    card.CustomFrontAudio = AmazonUploader.uploadAudioFile(cardInfo.frontAudio, "f$" + card.CardID);
                 }
                 if (cardInfo.backAudio is not null)
                 {
-                    card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, _user.UserName, cardInfo.backText, card.BackLang);
+                    card.CustomBackAudio = AmazonUploader.uploadAudioFile(cardInfo.backAudio, "b$" + card.CardID);
                 }
 
                 // update related deck's DateUpdated
@@ -719,7 +719,7 @@ namespace echoStudy_webAPI.Controllers
 
         // DELETE: /Cards/Delete
         /// <summary>
-        /// Deletes the cards related to the provided IDs
+        /// Deletes the cards and custom audio related to the provided IDs
         /// </summary>
         /// <param name="ids">List of IDs of cards to be deleted</param>
         /// <response code="204"></response>
@@ -747,6 +747,15 @@ namespace echoStudy_webAPI.Controllers
                 if (card.UserId != _user.Id)
                 {
                     return Forbid();
+                }
+
+                if(card.CustomFrontAudio is not null)
+                {
+                    AmazonUploader.deleteAudioFile("$f" + card.CardID);
+                }
+                if (card.CustomBackAudio is not null)
+                {
+                    AmazonUploader.deleteAudioFile("$b" + card.CardID);
                 }
 
                 _context.Cards.Remove(card);

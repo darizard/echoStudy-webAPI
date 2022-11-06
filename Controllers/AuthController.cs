@@ -358,5 +358,46 @@ namespace echoStudy_webAPI.Controllers
 
             return token.ToString();
         }
+
+        /// <summary>
+        /// Deletes ALL custom audio for EVERY card.
+        /// </summary>
+        [HttpGet("resetCustomAudioNames")]
+        public async Task<IActionResult> TempResetMethod()
+        {
+            var query = from c in _context.Cards select c;
+            List<Card> cards = await query.ToListAsync();
+
+            // Delete all audio files
+            foreach (Card card in cards)
+            {
+                if(card.CustomFrontAudio is not null)
+                {
+                    AmazonUploader.deleteAudioFile("$f" + card.CardID);
+                    card.CustomFrontAudio = null;
+                }
+                if (card.CustomBackAudio is not null)
+                {
+                    AmazonUploader.deleteAudioFile("$b" + card.CardID);
+                    card.CustomBackAudio = null;
+                }
+            }
+
+            // Try to save
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+            catch (DbUpdateException e)
+            {
+                return StatusCode(500, e.Message);
+            }
+
+            return Ok();
+        }
     }
 }
