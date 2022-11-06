@@ -363,6 +363,7 @@ namespace echoStudy_webAPI.Controllers
         /// Deletes ALL custom audio for EVERY card.
         /// </summary>
         [HttpGet("resetCustomAudioNames")]
+        [AllowAnonymous]
         public async Task<IActionResult> TempResetMethod()
         {
             var query = from c in _context.Cards select c;
