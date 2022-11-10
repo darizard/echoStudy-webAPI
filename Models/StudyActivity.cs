@@ -12,7 +12,7 @@ namespace echoStudy_webAPI.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public string Id { get; set; }
+        public int Id { get; set; }
 
         // These three fields together must be unique -- configured in fluent api
         [Required]

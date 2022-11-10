@@ -490,9 +490,10 @@ namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
 
             modelBuilder.Entity("echoStudy_webAPI.Models.StudyActivity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<DateTime>("DateStudied")
                         .HasColumnType("datetime2");

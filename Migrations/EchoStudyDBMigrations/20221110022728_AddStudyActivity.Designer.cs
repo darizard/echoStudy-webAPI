@@ -10,7 +10,7 @@ using echoStudy_webAPI.Models;
 namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
 {
     [DbContext(typeof(EchoStudyDB))]
-    [Migration("20221104025653_AddStudyActivity")]
+    [Migration("20221110022728_AddStudyActivity")]
     partial class AddStudyActivity
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -492,9 +492,10 @@ namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
 
             modelBuilder.Entity("echoStudy_webAPI.Models.StudyActivity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("int")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<DateTime>("DateStudied")
                         .HasColumnType("datetime2");

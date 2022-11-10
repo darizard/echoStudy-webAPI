@@ -11,7 +11,8 @@ namespace echoStudy_webAPI.Migrations.EchoStudyDBMigrations
                 name: "StudyActivity",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     DeckId = table.Column<int>(type: "int", nullable: true),
                     DateStudied = table.Column<DateTime>(type: "datetime2", nullable: false)
