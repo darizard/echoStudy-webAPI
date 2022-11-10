@@ -43,17 +43,46 @@ namespace echoStudy_webAPI.Data
         /**
         * Uploads the custom audio file provided by the given user.
         */
-        public static void uploadAudioFile(byte[] fileBytes, string username, string text, Language language)
+        public static string uploadAudioFile(byte[] fileBytes, string key)
         {
             // Create a PutObjectRequest and initialize its parameters
             PutObjectRequest objReq = new PutObjectRequest();
             objReq.BucketName = Resources.bucketName;
             objReq.InputStream = new MemoryStream(fileBytes);
-            objReq.Key = getFileName(text, username, language);
+            objReq.Key = getFileName(key);
             objReq.ContentType = "audio/mpeg";
 
             // Send the request to upload the file
             PutObjectResponse objResp = client.PutObjectAsync(objReq).Result;
+            return objReq.Key;
+        }
+
+        /**
+         * Deletes an audio file from S3 given text and language
+         */
+        public static void deleteAudioFile(string text, Language language)
+        {
+            // Request to delete file
+            DeleteObjectRequest objReq = new DeleteObjectRequest();
+            objReq.BucketName = Resources.bucketName;
+            objReq.Key = getFileName(text, language);
+
+            // Send the request to delete the file
+            DeleteObjectResponse objResp = client.DeleteObjectAsync(objReq).Result;
+        }
+
+        /**
+        * Deletes a custom audio file from S3 given username, text, and language
+        */
+        public static void deleteAudioFile(string key)
+        {
+            // Request to delete file
+            DeleteObjectRequest objReq = new DeleteObjectRequest();
+            objReq.BucketName = Resources.bucketName;
+            objReq.Key = getFileName(key);
+
+            // Send the request to delete the file
+            DeleteObjectResponse objResp = client.DeleteObjectAsync(objReq).Result;
         }
 
         /**
@@ -76,12 +105,12 @@ namespace echoStudy_webAPI.Data
         /**
         * Gets a presigned URL for the custom audio file from the info provided
         */
-        public static string getPresignedUrl(string text, string username, Language language)
+        public static string getPresignedUrl(string key)
         {
             // Create a GetPresignedUrlRequest and intialize it
             GetPreSignedUrlRequest urlReq = new GetPreSignedUrlRequest();
             urlReq.BucketName = Resources.bucketName;
-            urlReq.Key = getFileName(text, username, language);
+            urlReq.Key = getFileName(key);
             urlReq.Expires = DateTime.Now.AddMinutes(10);
             urlReq.Protocol = Protocol.HTTP;
 
@@ -156,9 +185,9 @@ namespace echoStudy_webAPI.Data
 
             return fileName + ".mp3";
         }
-        public static string getFileName(string text, string username, Language language)
+        public static string getFileName(string key)
         {
-            string fileName = username + " " + language.ToString() + " " + text;
+            string fileName = key;
 
             // Ensure no illegal characters
             fileName = ByteArrayToHexString(SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(fileName)));
