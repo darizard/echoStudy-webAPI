@@ -16,8 +16,7 @@ namespace echoStudy_webAPI.Controllers
 {
     [Route("deckcategories")]
     [ApiController]
-
-
+    [ApiExplorerSettings(IgnoreApi=true)]
     public class DeckCategoriesController : EchoUserControllerBase
     {
         private readonly EchoStudyDB _context;

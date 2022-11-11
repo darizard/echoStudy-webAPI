@@ -342,12 +342,17 @@ namespace echoStudy_webAPI.Controllers
             }
         }
 
-        // GET: /Authenticate
-        // If the supplied token is valid, returns the decoded JWT.
-        // This endpoint currently exists for testing purposes.
-        // Required headers:
-        //      Host: <host>
-        //      Authorization: Bearer <token>
+        /// <summary>
+        /// Returned the decoded JWT provded in the Authorization header.
+        /// </summary>
+        /// <remarks>
+        /// Intended for testing purposes.
+        /// </remarks>
+        /// <response code="200">Returns the decoded JWT</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserUpdateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
         [HttpGet("authenticate")]
         public string Get()
         {
@@ -357,48 +362,6 @@ namespace echoStudy_webAPI.Controllers
             var token = new JwtSecurityToken(encodedToken);
 
             return token.ToString();
-        }
-
-        /// <summary>
-        /// Deletes ALL custom audio for EVERY card.
-        /// </summary>
-        [HttpGet("resetCustomAudioNames")]
-        [AllowAnonymous]
-        public async Task<IActionResult> TempResetMethod()
-        {
-            var query = from c in _context.Cards select c;
-            List<Card> cards = await query.ToListAsync();
-
-            // Delete all audio files
-            foreach (Card card in cards)
-            {
-                if(card.CustomFrontAudio is not null)
-                {
-                    AmazonUploader.deleteAudioFile("$f" + card.CardID);
-                    card.CustomFrontAudio = null;
-                }
-                if (card.CustomBackAudio is not null)
-                {
-                    AmazonUploader.deleteAudioFile("$b" + card.CardID);
-                    card.CustomBackAudio = null;
-                }
-            }
-
-            // Try to save
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException e)
-            {
-                return StatusCode(500, e.Message);
-            }
-            catch (DbUpdateException e)
-            {
-                return StatusCode(500, e.Message);
-            }
-
-            return Ok();
         }
     }
 }

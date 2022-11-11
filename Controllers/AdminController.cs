@@ -11,6 +11,7 @@ namespace echoStudy_webAPI.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public class AdminController : EchoUserControllerBase
     {
         public AdminController(UserManager<EchoUser> um) : base(um)

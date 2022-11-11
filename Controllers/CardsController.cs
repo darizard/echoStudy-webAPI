@@ -778,96 +778,46 @@ namespace echoStudy_webAPI.Controllers
             return NoContent();
         }
 
-        /**
-         * Deletes all cards associated with one user
-         */
-        /*
-        // DELETE: api/Cards/5
-        [HttpDelete("/Cards/DeleteUserCards={userId}")]
-        public async Task<IActionResult> DeleteUserCards(string userId)
+        /// <summary>
+        /// Deletes ALL custom audio for EVERY card.
+        /// </summary>
+        [HttpGet("resetCustomAudioNames")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TempResetMethod()
         {
-            var query = from c in _context.Cards
-                        where c.UserId == userId
-                        select c;
+            var query = from c in _context.Cards select c;
+            List<Card> cards = await query.ToListAsync();
 
-            List<Card> userCards = await query.ToListAsync();
-            foreach(Card card in userCards)
+            // Delete all audio files
+            foreach (Card card in cards)
             {
-                _context.Cards.Remove(card);
-            }
-            
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-        */
-
-        /**
- * Deletes all cards associated with one user
- */
-        /*
-        // DELETE: api/Cards/5
-        [HttpDelete("/Cards/DeleteUserCardsByEmail={userEmail}")]
-        public async Task<IActionResult> DeleteUserCardsByEmail(string userEmail)
-        {
-            EchoUser user = await _userManager.FindByEmailAsync(userEmail);
-            if (user is null)
-            {
-                return BadRequest("User " + userEmail + " not found");
-            }
-            else
-            {
-                var query = from c in _context.Cards
-                            where c.UserId == user.Id
-                            select c;
-
-                List<Card> userCards = await query.ToListAsync();
-                foreach (Card card in userCards)
+                if (card.CustomFrontAudio is not null)
                 {
-                    _context.Cards.Remove(card);
+                    AmazonUploader.deleteAudioFile("$f" + card.CardID);
+                    card.CustomFrontAudio = null;
                 }
+                if (card.CustomBackAudio is not null)
+                {
+                    AmazonUploader.deleteAudioFile("$b" + card.CardID);
+                    card.CustomBackAudio = null;
+                }
+            }
 
+            // Try to save
+            try
+            {
                 await _context.SaveChangesAsync();
-
-                return NoContent();
             }
-        }
-        */
-
-        /**
-         * Deletes all cards associated with a deck
-         */
-        /*
-        [HttpDelete("/Cards/DeleteDeckCards={deckId}")]
-        public async Task<IActionResult> DeleteDeckCards(int deckId)
-        {
-            // Grab the deck. Only possible for one or zero results since ids are unique.
-            var deckQuery = from d in _context.Decks.Include(d => d.Cards)
-                        where d.DeckID == deckId
-                        select d;
-            if (deckQuery.Count() == 0)
+            catch (DbUpdateConcurrencyException e)
             {
-                return BadRequest("Deck id " + deckId + " does not exist");
+                return StatusCode(500, e.Message);
             }
-
-            Deck deck = deckQuery.First();
-
-            foreach (Card card in deck.Cards)
+            catch (DbUpdateException e)
             {
-                _context.Cards.Remove(card);
+                return StatusCode(500, e.Message);
             }
 
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            return Ok();
         }
-        */
-
-        /*
-        private bool CardExists(int id)
-        {
-            return _context.Cards.Any(e => e.CardID == id);
-        }
-        */
     }
 }
