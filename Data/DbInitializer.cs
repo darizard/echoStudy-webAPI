@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks;
 
 namespace echoStudy_webAPI.Data
@@ -23,6 +24,11 @@ namespace echoStudy_webAPI.Data
             if (!echoContext.Decks.Any() && !echoContext.DeckCategories.Any() && !echoContext.Cards.Any())
             {
                 await addLanguageMaterial(echoContext, userManager);
+            }
+            // Seed activity data
+            if(echoContext.StudyActivity.Count() < 1800)
+            {
+                await addStudyActivity(echoContext, userManager);
             }
         }
 
@@ -41,6 +47,65 @@ namespace echoStudy_webAPI.Data
                     Console.WriteLine("WARNING: Migration failed (likely due to database already being up to date)");
                 }     
             }
+        }
+
+        public static async Task addStudyActivity(EchoStudyDB context, UserManager<EchoUser> userManager)
+        {
+            // Users
+            List<EchoUser> users = new List<EchoUser>();
+            users.Add(await userManager.FindByEmailAsync("JohnDoe@gmail.com"));
+            users.Add(await userManager.FindByEmailAsync("JaneDoe@gmail.com"));
+            users.Add(await userManager.FindByEmailAsync("JohnSmith@gmail.com"));
+
+            // Generate 150 study activities for 4 years.
+            Random random = new Random();
+            foreach (EchoUser user in users)
+            {
+                var query = from d in context.Decks where d.UserId == user.Id select d;
+                Deck[] decks = await query.ToArrayAsync();
+                // Add 200 study activities to every year
+                for(int i = 0; i < 4; i++)
+                {
+                    for(int j = 0; j < 200; j++)
+                    {
+                        DateTime date = GetRandomDate(new DateTime(2019 + i, 1, 1), new DateTime(2019 + i, 12, 31));
+                        Deck deck = decks[random.Next(decks.Length)];
+
+                        StudyActivity activity = new StudyActivity
+                        {
+                            UserId = user.Id,
+                            User = user,
+                            DeckId = deck.DeckID,
+                            Deck = deck,
+                            DateStudied = date
+                        };
+                        await context.StudyActivity.AddAsync(activity);
+                    }
+                }
+            }
+
+            // Save
+            try
+            {
+                await context.SaveChangesAsync();
+            }
+            catch(Exception e)
+            {
+
+            }
+        }
+
+        /**
+         * https://stackoverflow.com/questions/14505932/random-datetime-between-range-not-unified-output
+         */
+        static readonly Random rnd = new Random();
+        private static DateTime GetRandomDate(DateTime from, DateTime to)
+        {
+            var range = to - from;
+
+            var randTimeSpan = new TimeSpan((long)(rnd.NextDouble() * range.Ticks));
+
+            return from + randTimeSpan;
         }
 
         /**

@@ -778,6 +778,7 @@ namespace echoStudy_webAPI.Controllers
             return NoContent();
         }
 
+        /*
         /// <summary>
         /// Deletes ALL custom audio for EVERY card.
         /// </summary>
@@ -819,5 +820,6 @@ namespace echoStudy_webAPI.Controllers
 
             return Ok();
         }
+        */
     }
 }
