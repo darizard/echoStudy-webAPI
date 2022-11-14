@@ -26,7 +26,7 @@ namespace echoStudy_webAPI.Data
                 await addLanguageMaterial(echoContext, userManager);
             }
             // Seed activity data
-            if(echoContext.StudyActivity.Count() < 1800)
+            if(echoContext.StudyActivity.Count() < 2400)
             {
                 await addStudyActivity(echoContext, userManager);
             }
@@ -49,6 +49,9 @@ namespace echoStudy_webAPI.Data
             }
         }
 
+        /**
+         * Seeds StudyActivity data to the database using 3 users and randomly selecting their decks.
+         */
         public static async Task addStudyActivity(EchoStudyDB context, UserManager<EchoUser> userManager)
         {
             // Users
@@ -57,7 +60,7 @@ namespace echoStudy_webAPI.Data
             users.Add(await userManager.FindByEmailAsync("JaneDoe@gmail.com"));
             users.Add(await userManager.FindByEmailAsync("JohnSmith@gmail.com"));
 
-            // Generate 150 study activities for 4 years.
+            // Generate 200 study activities for 4 years.
             Random random = new Random();
             foreach (EchoUser user in users)
             {
