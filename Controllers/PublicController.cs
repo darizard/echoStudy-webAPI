@@ -92,7 +92,9 @@ namespace echoStudy_webAPI.Controllers
                     date_updated = d.DateUpdated,
                     orig_deck_id = d.OrigDeckId,
                     orig_author_id = d.OrigAuthorId,
-                    orig_author_name = d.OrigAuthorId.IsNullOrEmpty() ? null : d.OrigAuthor.UserName
+                    orig_author_name = d.OrigAuthorId.IsNullOrEmpty() ? null : d.OrigAuthor.UserName,
+                    owner_profile_pic = GravatarConfig.GenerateGravatarURL(d.DeckOwner),
+                    orig_author_profile_pic = d.OrigAuthorId.IsNullOrEmpty() ? null : GravatarConfig.GenerateGravatarURL(d.OrigAuthor)
                 });
             }
 
@@ -343,7 +345,7 @@ namespace echoStudy_webAPI.Controllers
             return Ok(new UserInfoPublicResponse
             {
                 Username = user.UserName,
-                ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro",
+                ProfilePicture = GravatarConfig.GenerateGravatarURL(user),
                 DateCreated = user.DateCreated,
                 Decks = await query.ToListAsync()
             });
@@ -374,7 +376,7 @@ namespace echoStudy_webAPI.Controllers
                 UserInfoPublicResponse publicInfo = new UserInfoPublicResponse
                 {
                     Username = user.UserName,
-                    ProfilePicture = "https://gravatar.com/avatar/" + MD5.HashData(Encoding.ASCII.GetBytes(user.Email.Trim().ToLower())) + "?d=retro",
+                    ProfilePicture = GravatarConfig.GenerateGravatarURL(user),
                     DateCreated = user.DateCreated
                 };
 
