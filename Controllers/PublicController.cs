@@ -19,6 +19,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Castle.Core.Internal;
 using static echoStudy_webAPI.Controllers.CardsController;
+using echoStudy_webAPI.Data.Requests;
 
 namespace echoStudy_webAPI.Controllers
 {
@@ -486,6 +487,72 @@ namespace echoStudy_webAPI.Controllers
                                 date_touched = c.DateTouched
                             };
             return Ok(await queryuser.ToListAsync());
+        }
+
+        // GET /public/studyactivity
+        /// <summary>
+        /// Returns an object representing the currently authenticated user's study activity
+        /// </summary>
+        /// <response code="200">Returns a list of all usernames</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [HttpGet("studyactivity")]
+        public async Task<IActionResult> GetAllActivity([FromQuery] ActivityRetrievalRequest request)
+        {
+            DateTime? start = request.StartDate is null ? DateTime.MinValue : request.StartDate;
+            DateTime? end = request.EndDate is null ? DateTime.MaxValue : request.EndDate;
+
+            var query = from sa in _context.StudyActivity
+                        where sa.DateStudied.Date <= end && sa.DateStudied.Date >= start
+                        select new
+                        {
+                            sa.UserId,
+                            sa.DeckId,
+                            sa.DateStudied
+                        };
+
+            var records = await query.ToListAsync();
+
+            Dictionary<string, Dictionary<DateTime, List<int?>>> resultsDict = new();
+            // build a set of keys (dates studied) with related lists of deckIds
+            foreach (var record in records)
+            {
+                if(!resultsDict.ContainsKey(record.UserId))
+                {
+                    resultsDict[record.UserId] = new Dictionary<DateTime, List<int?>>();
+                }
+                if (!resultsDict[record.UserId].ContainsKey(record.DateStudied.Date))
+                {
+                    resultsDict[record.UserId][record.DateStudied.Date] = new List<int?>();
+                }
+                resultsDict[record.UserId][record.DateStudied.Date].Add(record.DeckId);
+            }
+
+            // return Ok(resultsDict);
+
+            // configure the dict into a list of objects where date is a key and decks is its related list of deck ids
+            List<object> rtnobj = new();
+            foreach (var userEntry in resultsDict)
+            {
+                List<object> dateobj = new();
+                foreach (var dateEntry in userEntry.Value)
+                {
+                    dateobj.Add(new
+                    {
+                        date = dateEntry.Key.Date,
+                        decks = dateEntry.Value
+                    });
+                }
+                rtnobj.Add(new
+                {
+                    userid = userEntry.Key,
+                    activity = dateobj
+                });
+            }
+
+            return Ok(rtnobj);
         }
     }
 }

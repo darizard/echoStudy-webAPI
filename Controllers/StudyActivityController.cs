@@ -27,7 +27,7 @@ namespace echoStudy_webAPI.Controllers
             _context = context;
         }
 
-        // GET /activity
+        // GET /studyactivity
         /// <summary>
         /// Returns an object representing the currently authenticated user's study activity
         /// </summary>
@@ -43,7 +43,7 @@ namespace echoStudy_webAPI.Controllers
             DateTime? end = request.EndDate is null ? DateTime.MaxValue : request.EndDate;
 
             var query = from sa in _context.StudyActivity
-                        where sa.DateStudied.Date <= end && sa.DateStudied.Date >= start
+                        where sa.DateStudied.Date <= end && sa.DateStudied.Date >= start && sa.UserId == _user.Id
                         select new
                         {
                             sa.DeckId,
@@ -56,11 +56,11 @@ namespace echoStudy_webAPI.Controllers
             Dictionary<DateTime, List<int?>> resultsDict = new();
             foreach(var record in records)
             {
-                if(!resultsDict.ContainsKey(record.DateStudied))
+                if(!resultsDict.ContainsKey(record.DateStudied.Date))
                 {
-                    resultsDict[record.DateStudied] = new List<int?>();
+                    resultsDict[record.DateStudied.Date] = new List<int?>();
                 }
-                resultsDict[record.DateStudied].Add(record.DeckId);
+                resultsDict[record.DateStudied.Date].Add(record.DeckId);
             }
 
             // configure the dict into a list of objects where date is a key and decks is its related list of deck ids
