@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -41,8 +42,8 @@ namespace echoStudy_webAPI.Data
         }
 
         /**
-        * Uploads the custom audio file provided by the given user.
-        */
+         * Uploads the given bytes as an audio file
+         */
         public static string uploadAudioFile(byte[] fileBytes, string key)
         {
             // Create a PutObjectRequest and initialize its parameters
@@ -55,6 +56,24 @@ namespace echoStudy_webAPI.Data
             // Send the request to upload the file
             PutObjectResponse objResp = client.PutObjectAsync(objReq).Result;
             return objReq.Key;
+        }
+
+        /**
+        * Uploads the file assuming it's angiven the path
+        */
+        public static HttpStatusCode uploadmp4(string filePath, string key)
+        {
+            // Create a PutObjectRequest and initialize its parameters
+            PutObjectRequest objReq = new PutObjectRequest();
+            objReq.BucketName = Resources.bucketName;
+            objReq.FilePath = filePath;
+            objReq.Key = getFileName(key);
+            objReq.ContentType = "video/mp4";
+
+            // Send the request to upload the file
+            PutObjectResponse objResp = client.PutObjectAsync(objReq).Result;
+
+            return objResp.HttpStatusCode;
         }
 
         /**

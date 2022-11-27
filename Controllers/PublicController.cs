@@ -554,5 +554,28 @@ namespace echoStudy_webAPI.Controllers
 
             return Ok(rtnobj);
         }
+
+        // GET: /Public/Cards?deckId={deckId}
+        /// <summary>
+        /// Retrieves all Card objects owned by the authenticated user or all Card
+        /// objects associated with a specific Deck owned by the authenticated user
+        /// </summary>
+        /// <remarks>
+        /// </remarks>
+        /// <param name="deckId">The ID of the related deck</param>"
+        /// <response code="200">Returns the queried Card objects</response>
+        /// <response code="401">A valid, non-expired token was not received in the Authorization header</response>
+        /// <response code="403">The current user is not authorized to access the specified deck</response>
+        /// <response code="404">Object not found with the provided userId, userEmail, or deckId</response>
+        [HttpGet("userguide")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(IQueryable<CardInfo>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UnauthorizedResult), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ForbidResult), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<string>> GetUserGuide()
+        {
+            return AmazonUploader.getPresignedUrl("userguide.mp4");
+        }
     }
 }
