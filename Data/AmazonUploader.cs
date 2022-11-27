@@ -124,13 +124,13 @@ namespace echoStudy_webAPI.Data
         /**
         * Gets a presigned URL for the custom audio file from the info provided
         */
-        public static string getPresignedUrl(string key)
+        public static string getPresignedUrl(string key, int minutes)
         {
             // Create a GetPresignedUrlRequest and intialize it
             GetPreSignedUrlRequest urlReq = new GetPreSignedUrlRequest();
             urlReq.BucketName = Resources.bucketName;
             urlReq.Key = getFileName(key);
-            urlReq.Expires = DateTime.Now.AddMinutes(10);
+            urlReq.Expires = DateTime.Now.AddMinutes(minutes);
             urlReq.Protocol = Protocol.HTTP;
 
             // Send the request to get the url

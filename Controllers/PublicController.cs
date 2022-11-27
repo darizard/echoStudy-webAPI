@@ -577,7 +577,7 @@ namespace echoStudy_webAPI.Controllers
         [ProducesResponseType(typeof(NotFoundResult), StatusCodes.Status404NotFound)]
         public async Task<ActionResult<string>> GetUserGuide()
         {
-            return AmazonUploader.getPresignedUrl("userguide.mp4");
+            return AmazonUploader.getPresignedUrl("userguide.mp4", 10);
         }
     }
 }
