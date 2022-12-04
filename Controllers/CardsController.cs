@@ -671,13 +671,29 @@ namespace echoStudy_webAPI.Controllers
                 card.DateTouched = studiedTime;
                 deck.DateTouched = studiedTime;
 
+                // If we can't update the info on the current card, don't
+                // include it in the list of ids in the response and move to the next
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    continue;
+                }
+                catch (DbUpdateException)
+                {
+                    continue;
+                }
+
                 // Update the card and deck
                 ids.Add(card.CardID);
 
                 // ensure we haven't already recorded study activity for this deck for this user today
                 var query = from sa in _context.StudyActivity
                             where sa.UserId == _user.Id
-                               && sa.DateStudied == DateTime.Now.Date
+                               && sa.DateStudied.Date == studiedTime.Date
                                && sa.DeckId == deck.DeckID
                             select sa;
 
@@ -689,24 +705,25 @@ namespace echoStudy_webAPI.Controllers
                     {
                         UserId = _user.Id,
                         DeckId = deck.DeckID,
-                        DateStudied = DateTime.Now.Date
+                        DateStudied = studiedTime.Date
                     };
 
                     await _context.AddAsync(activity);
-                }
-            }
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException e)
-            {
-                return StatusCode(500, e.Message);
-            }
-            catch (DbUpdateException e)
-            {
-                return StatusCode(500, e.Message);
+                    // if study activity can't be updated, just don't and move to the next card.
+                    try
+                    {
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        // Here we would log the exception if we were working further on the project
+                    }
+                    catch (DbUpdateException)
+                    {
+                        // Here we would log the exception if we were working further on the project
+                    }
+                }
             }
 
             // Indicate success
