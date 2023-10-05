@@ -4,7 +4,7 @@ The backend of echostudy.com
 
 ## Description
 
-This project was made in Spring 2022 and Fall 2022 as a senior project at the University of Utah. It uses a SQL database to store all of our user's information as well as utilizes Amazon services such as S3 and Amazon Polly. Our REST API provides endpoints to communicate with our database and amazon services as needed. User accounts are specifically handled with .NET Identity for security and communicates these to the front-end using JWT. Documentation is outlined on our Swagger page which can be accessed on our live site or by running the project locally.
+This project was made in Spring 2022 and Fall 2022 as a senior project at the University of Utah. It uses a SQL database to store all of our users' information and uses Amazon services such as S3 and Amazon Polly. Our REST API provides endpoints to communicate with our database and amazon services as needed. User accounts are specifically handled with .NET Identity for security and communicates these to the front-end using JWT. Documentation is outlined on our Swagger page which can be accessed on our live site at https://api.echoStudy.com/swagger or by running the project locally. The API and its frontend counterpart are hosted on an AWS EC2 instance at https://api.echostudy.com and https://www.echostudy.com respectively.
 
 ## Change Log
 
